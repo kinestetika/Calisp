@@ -36,17 +36,17 @@ abundance data, it works well to only use those spectra that have a FFT fitting 
 
 **Installation:**
 
->python -m virtualenv calisp
->source calisp/bin/activate
->pip install calisp
+'>python -m virtualenv calisp' 
+'>source calisp/bin/activate' 
+'>pip install calisp'
 
 **Usage:**
 
->source calisp/bin/activate
->calisp.py --spectrumFile [path to .mzML file or folder with .mzML files] --peptideFile [path to .mzML file or folder 
+'>source calisp/bin/activate' 
+'>calisp.py --spectrumFile [path to .mzML file or folder with .mzML files] --peptideFile [path to .mzML file or folder 
  with .mzML files] --outputFile [path to where calisp.py will save results files] --threads [# of threads used, 
  default 4] --isotope [15N, 3H etc, default 13C], --organismDelimiter [character that separates an organism ID from the
- remainder of protein IDs, default '_'], --massAccuracy [accuracy of peak m/z identifications, default 10 ppm]
+ remainder of protein IDs, default '_'], --massAccuracy [accuracy of peak m/z identifications, default 10 ppm]'
 
 **Column names of the Pandas DataFrame created by calisp.py:**
 In the saved dataframe, each row contains one spectrum, defined by the following columns:

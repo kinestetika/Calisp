@@ -15,7 +15,7 @@ work will explore that possibility.
 Calisp.py is still under development. It works, technically, but documentation and benchmarking is still in progress.
 Also, detection of isotope clumps and parsing of .mzid files still needs to be implemented. 
 
-Calisp.py depends on numpy, scipy, pandas, tqdm, pyzmlm, pyarrow. It outputs the data as a Pandas DataFrame saved in 
+Calisp.py depends on numpy, scipy, pandas, tqdm, pymzml, pyarrow. It outputs the data as a Pandas DataFrame saved in 
 (binary) feather format. From there, the user can explore and visualize the results in a Jupyter notebook. For that, a
 tutorial wil be provided.
 

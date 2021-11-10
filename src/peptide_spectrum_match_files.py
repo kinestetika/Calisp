@@ -1,7 +1,7 @@
 import os
 import re
 import numpy as np
-from Calisp import element_count_and_mass_utils as util, spectrum_analysis_utils
+from src import element_count_and_mass_utils as util, spectrum_analysis_utils
 
 UNBINNED = 'unbinned'
 

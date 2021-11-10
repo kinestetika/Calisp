@@ -29,9 +29,9 @@ def log(log_message, topic=''):
         print(f'{format_runtime()} {log_message}')
 
 
-log(f'This is Calisp.py {VERSION}')
+log(f'This is src.py {VERSION}')
 
-parser = argparse.ArgumentParser(description='Calisp.py. (C) Marc Strous, Xiaoli Dong and Manuel Kleiner, 2018, 2021')
+parser = argparse.ArgumentParser(description='src.py. (C) Marc Strous, Xiaoli Dong and Manuel Kleiner, 2018, 2021')
 parser.add_argument('--spectrumFile', required=True,  # type=argparse.FileType('r'),
                     help='[.mzML] file or folder with [.mzML] file(s). If this is a folder, the source filename(s) '
                          'specified in the [.mzID] files inside that folder must match [.target-peptide-spectrum-match]'
@@ -54,12 +54,14 @@ parser.add_argument('--isotope', default='13C', choices=['13C', '14C', '15N', '1
                                                          '36S'],
                     help='The target isotope. Default: 13C')
 
-args = parser.parse_args('--peptideFile /home/kinestetika/Proteomics/sif '
-                         '--spectrumFile /home/kinestetika/Proteomics/sif '
-                         '--outputFile /home/kinestetika/Proteomics/sif/calisp --threads 8'.split())
+args = parser.parse_args('--peptideFile /home/kinestetika/Proteomics/Ecoli-labeled-unlabeled/ '
+                         '--spectrumFile /home/kinestetika/Proteomics/Ecoli-labeled-unlabeled/ '
+                         '--outputFile /home/kinestetika/Proteomics/Ecoli-labeled-unlabeled//calisp --threads 8'.split())
 
-(spectrum_analysis_utils.ELEMENT_ROW_INDEX, spectrum_analysis_utils.ISOTOPE_COLUMN_INDEX) = {'13C': (0, 1), '14C': (0, 2), '15N': (1, 1),
-                                                           '17O': (2,1), '18O': (2,2), '2H': (3,1), '3H': (3,2),
+(spectrum_analysis_utils.ELEMENT_ROW_INDEX, spectrum_analysis_utils.ISOTOPE_COLUMN_INDEX) = {'13C': (0, 1), '14C': (0, 2),
+                                                                                             '15N': (1, 1),
+                                                                                             '17O': (2,1), '18O': (2,2),
+                                                                                             '2H': (3,1), '3H': (3,2),
                                                            '33S': (4,1), '34S': (4,2), '36S': (4,4)}[args.isotope]
 args.massAccuracy /= 1e6
 
@@ -271,7 +273,7 @@ for experiment_index in range(len(my_data_store.experiments)):
         # (3) read the ms_run file to grab currently unknown precursor ids for the known ms2 spectra as well as
         # collect all the ms1 spectra for subsampling, then: subsample.
         log(f'Now parsing ({spectrum_file_counter}/{len(ms_runs)}) spectrum files to find '
-                f'{len(psm_data_of_current_ms_run.index)} MS1 precursors, "{os.path.basename(ms_run_file)}"')
+                f'{len(psm_data_of_current_ms_run.index)} MS1 precursors, "{os.path.basename(ms_run_file)}"...')
         ms1_spectra_hash = {}
         ms1_id_list = []
         ms1_spectra_list = []
@@ -293,9 +295,9 @@ for experiment_index in range(len(my_data_store.experiments)):
             except KeyError:
                 pass
         log(f'({psm_with_spectrum_count}/{len(psm_data_of_current_ms_run.index)}) PSMs have precursor MS1 spectrum')
-        log(f'Now subsampling peptide spectra for {len(psm_data_of_current_ms_run.index)} precursor MS1 spectra.'
-                f' Using {args.threads} threads for isotope analysis. Parsed {len(ms1_spectra_list)} '
-            f'MS1 spectra from file, prepping tasks for parallel execution...')
+        log(f'Now subsampling peptide spectra for {len(psm_data_of_current_ms_run.index)} PSMs from '
+            f'{len(ms1_spectra_list)} MS1 spectra, using {args.threads} threads for isotope analysis, '
+            f'first prepping tasks for parallel execution...')
 
         spectra_data = pd.DataFrame(columns=data_store.DATAFRAME_COLUMNS)
         spectra_data = spectra_data.astype(data_store.DATAFRAME_DATATYPES)
@@ -317,8 +319,8 @@ for experiment_index in range(len(my_data_store.experiments)):
                 all_spectra.extend(spectra)
         spectra_data = spectra_data.append(all_spectra, ignore_index=True)
         log(f'Subsampled and analyzed {len(spectra_data.index)} spectra, '
-                f'reassigned {spectra_reassigned_count / len(spectra_data.index) * 100:.1f}%. '
-                f'Now flagging overlap between spectra...')
+            f'reassigned {spectra_reassigned_count / len(spectra_data.index) * 100:.1f}% of spectra to '
+            f'their nearest PSM. Now flagging overlap between spectra...')
 
         # (4) check for contamination (the same ms1 peaks shared by multiple peptide spectra
         with ProcessPoolExecutor(max_workers=args.threads) as executor:
@@ -328,10 +330,10 @@ for experiment_index in range(len(my_data_store.experiments)):
             for indexes in list(tqdm(executor.map(submit_for_overlap_detection, tasks, chunksize=25), total=len(tasks))):
                 for index in indexes:
                     spectra_data.at[index, 'flag_spectrum_is_contaminated'] = True
-        log(f'Contamination found for {len(spectra_data[spectra_data["flag_spectrum_is_contaminated"] == True].index) / len(spectra_data) * 100:.1f}% of spectra.')
-        log(f'Wobbly spectra make up {len(spectra_data[spectra_data["flag_spectrum_is_wobbly"] == True].index) / len(spectra_data) * 100:.1f}% of spectra.')
+        log(f'Contamination found for {len(spectra_data[spectra_data["flag_spectrum_is_contaminated"] == True].index) / len(spectra_data) * 100:.1f}% of all spectra.')
+        log(f'Wobbly spectra make up {len(spectra_data[spectra_data["flag_spectrum_is_wobbly"] == True].index) / len(spectra_data) * 100:.1f}% of all spectra.')
         experiment_results_file = os.path.join(output_folder,
                                                os.path.splitext(os.path.basename(experiment_filename))[0] + '.feather')
         log(f'Saving pandas dataframe with {len(spectra_data.index)} spectra to f{experiment_results_file} in feather format...')
         spectra_data.to_feather(experiment_results_file)
-log(f'Done. Thanks for using Calisp!')
+log(f'Done. Thanks for using src!')

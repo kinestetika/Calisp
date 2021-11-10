@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import minimize_scalar,OptimizeResult
-from Calisp import element_count_and_mass_utils as utils
+from src import element_count_and_mass_utils as utils
 
 ELEMENT_ROW_INDEX = 0
 ISOTOPE_COLUMN_INDEX = 1

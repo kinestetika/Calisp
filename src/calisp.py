@@ -29,7 +29,7 @@ def log(log_message, topic=''):
         print(f'{format_runtime()} {log_message}')
 
 
-log(f'This is src.py {VERSION}')
+log(f'This is Calisp.py {VERSION}')
 
 parser = argparse.ArgumentParser(description='src.py. (C) Marc Strous, Xiaoli Dong and Manuel Kleiner, 2018, 2021')
 parser.add_argument('--spectrumFile', required=True,  # type=argparse.FileType('r'),
@@ -54,9 +54,9 @@ parser.add_argument('--isotope', default='13C', choices=['13C', '14C', '15N', '1
                                                          '36S'],
                     help='The target isotope. Default: 13C')
 
-args = parser.parse_args('--peptideFile /home/kinestetika/Proteomics/Ecoli-labeled-unlabeled/ '
-                         '--spectrumFile /home/kinestetika/Proteomics/Ecoli-labeled-unlabeled/ '
-                         '--outputFile /home/kinestetika/Proteomics/Ecoli-labeled-unlabeled//calisp --threads 8'.split())
+args = parser.parse_args('--peptideFile /home/mstrous/Proteomics/Yihua/input_PSMs_Runs_7_8_9 '
+                         '--spectrumFile /home/mstrous/Proteomics/Yihua/input_mzMLs_Runs_7_8_9 '
+                         '--outputFile /home/mstrous/Proteomics/Yihua/calisp --threads 8'.split())
 
 (spectrum_analysis_utils.ELEMENT_ROW_INDEX, spectrum_analysis_utils.ISOTOPE_COLUMN_INDEX) = {'13C': (0, 1), '14C': (0, 2),
                                                                                              '15N': (1, 1),
@@ -188,10 +188,21 @@ def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_spectra,
                 break
         if not len(mono_isotopic_peak):
             continue
-        # (2) find remainder of spectrum
         peak_moverz = [mono_isotopic_peak[0]]
         peak_intensities = [mono_isotopic_peak[1]]
         mass_shift = utils.NEUTRON_MASS_SHIFT / charge
+
+        # (2) assess presence of a peak at minus one position
+        expected_mz = peak_moverz[0] - mass_shift
+        peak_at_minus_one = False
+        for q in range(mip_p-1, 0, -1):
+            peak = ms1_peaks[q]
+            if abs(peak[0] - expected_mz) / expected_mz < args.massAccuracy:
+                peak_at_minus_one = True
+            elif peak[0] < expected_mz:
+                break
+
+        # (3) find remainder of spectrum
         for q in range(mip_p+1, len(ms1_peaks)):
             peak = ms1_peaks[q]
             # calculating distance from monoisotopic is slightly better than peak-to-peak
@@ -217,6 +228,7 @@ def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_spectra,
                                    'spectrum_peak_count': len(peak_intensities),
                                    'flag_spectrum_is_contaminated': False,
                                    'flag_spectrum_is_wobbly': False,
+                                   'flag_peak_at_minus_one_pos': peak_at_minus_one,
                                    'reassigned': False}
             for p in range(len(peak_intensities)):
                 subsampled_spectrum[f'i{p}'] = peak_intensities[p]

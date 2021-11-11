@@ -37,7 +37,8 @@ DATAFRAME_DATATYPES = {'experiment': str,
                        'flag_psm_has_low_confidence': bool,
                        'flag_psm_is_ambiguous': bool,
                        'flag_spectrum_is_contaminated': bool,
-                       'flag_spectrum_is_wobbly': bool}
+                       'flag_spectrum_is_wobbly': bool,
+                       'flag_peak_at_minus_one_pos': bool}
 
 DATAFRAME_COLUMNS = ['experiment', 'ms_run', 'bins', 'proteins', 'peptide', 'peptide_mass', 'C', 'N', 'O', 'H', 'S',
                      'psm_id','psm_mz', 'psm_charge', 'psm_neutrons', 'psm_rank', 'psm_precursor_id',
@@ -47,7 +48,7 @@ DATAFRAME_COLUMNS = ['experiment', 'ms_run', 'bins', 'proteins', 'peptide', 'pep
                      'flag_peptide_contains_sulfur', 'flag_peptide_has_modifications',
                      'flag_peptide_assigned_to_multiple_bins', 'flag_peptide_assigned_to_multiple_proteins',
                      'flag_peptide_mass_and_elements_undefined', 'flag_psm_has_low_confidence','flag_psm_is_ambiguous',
-                     'flag_spectrum_is_contaminated', 'flag_spectrum_is_wobbly']
+                     'flag_spectrum_is_contaminated', 'flag_spectrum_is_wobbly', 'flag_peak_at_minus_one_pos']
 
 for i in range(20):
     column_name = f'i{i}'

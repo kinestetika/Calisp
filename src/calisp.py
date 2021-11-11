@@ -54,9 +54,9 @@ parser.add_argument('--isotope', default='13C', choices=['13C', '14C', '15N', '1
                                                          '36S'],
                     help='The target isotope. Default: 13C')
 
-args = parser.parse_args('--peptideFile /home/mstrous/Proteomics/Yihua/input_PSMs_Runs_7_8_9 '
-                         '--spectrumFile /home/mstrous/Proteomics/Yihua/input_mzMLs_Runs_7_8_9 '
-                         '--outputFile /home/mstrous/Proteomics/Yihua/calisp --threads 8'.split())
+args = parser.parse_args('--peptideFile /home/kinestetika/Proteomics/mock-community/Run1_All '
+                         '--spectrumFile /home/kinestetika/Proteomics/mock-community/Run1_All '
+                         '--outputFile /home/kinestetika/Proteomics/mock-community/Run1_All/calisp --threads 8'.split())
 
 (spectrum_analysis_utils.ELEMENT_ROW_INDEX, spectrum_analysis_utils.ISOTOPE_COLUMN_INDEX) = {'13C': (0, 1), '14C': (0, 2),
                                                                                              '15N': (1, 1),
@@ -344,8 +344,8 @@ for experiment_index in range(len(my_data_store.experiments)):
                     spectra_data.at[index, 'flag_spectrum_is_contaminated'] = True
         log(f'Contamination found for {len(spectra_data[spectra_data["flag_spectrum_is_contaminated"] == True].index) / len(spectra_data) * 100:.1f}% of all spectra.')
         log(f'Wobbly spectra make up {len(spectra_data[spectra_data["flag_spectrum_is_wobbly"] == True].index) / len(spectra_data) * 100:.1f}% of all spectra.')
-        experiment_results_file = os.path.join(output_folder,
-                                               os.path.splitext(os.path.basename(experiment_filename))[0] + '.feather')
-        log(f'Saving pandas dataframe with {len(spectra_data.index)} spectra to f{experiment_results_file} in feather format...')
-        spectra_data.to_feather(experiment_results_file)
-log(f'Done. Thanks for using src!')
+        ms_run_results_file = os.path.join(output_folder,
+                                               os.path.splitext(os.path.basename(ms_run_file))[0] + '.feather')
+        log(f'Saving pandas dataframe with {len(spectra_data.index)} spectra to f{ms_run_results_file} in feather format...')
+        spectra_data.to_feather(ms_run_results_file)
+log(f'Done. Thanks for using Calisp!')

@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='calisp',
-    version='0.0',
+    version='3.0',
     packages=setuptools.find_packages(where='src'),
     url='https://github.com/kinestetika/Calisp',
     license='MIT',

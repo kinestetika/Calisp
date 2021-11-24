@@ -13,7 +13,7 @@ import data_store
 import element_count_and_mass_utils as utils
 from peptide_spectrum_match_files import PeptideSpectrumMatchFileReader
 
-VERSION = 0.0
+VERSION = 3.0
 START_TIME = time.monotonic()
 LOG_TOPICS = set()
 

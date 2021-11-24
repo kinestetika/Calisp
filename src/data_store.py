@@ -16,7 +16,7 @@ DATAFRAME_DATATYPES = {'experiment': str,
                        'psm_id': int,
                        'psm_mz': float,
                        'psm_charge': int,
-                       'psm_neutrons': int,
+                       'psm_neutrons': float,
                        'psm_rank': int,
                        'psm_precursor_id': int,
                        'psm_precursor_mz': float,
@@ -29,6 +29,7 @@ DATAFRAME_DATATYPES = {'experiment': str,
                        'ratio_na': float,
                        'ratio_fft': float,
                        'error_fft': float,
+                       'error_clumpy': float,
                        'flag_peptide_contains_sulfur': bool,
                        'flag_peptide_has_modifications': bool,
                        'flag_peptide_assigned_to_multiple_bins': bool,
@@ -44,21 +45,27 @@ DATAFRAME_COLUMNS = ['experiment', 'ms_run', 'bins', 'proteins', 'peptide', 'pep
                      'psm_id','psm_mz', 'psm_charge', 'psm_neutrons', 'psm_rank', 'psm_precursor_id',
                      'psm_precursor_mz', 'spectrum_charge', 'spectrum_precursor_id', 'spectrum_total_intensity',
                      'spectrum_peak_count', 'spectrum_median_peak_spacing', 'spectrum_mass_irregularity',
-                     'ratio_na', 'ratio_fft','error_fft',
+                     'ratio_na', 'ratio_fft','error_fft', 'error_clumpy',
                      'flag_peptide_contains_sulfur', 'flag_peptide_has_modifications',
                      'flag_peptide_assigned_to_multiple_bins', 'flag_peptide_assigned_to_multiple_proteins',
                      'flag_peptide_mass_and_elements_undefined', 'flag_psm_has_low_confidence','flag_psm_is_ambiguous',
                      'flag_spectrum_is_contaminated', 'flag_spectrum_is_wobbly', 'flag_peak_at_minus_one_pos']
 
-for i in range(20):
+for i in range(20):  # intensities of the spectrum's peaks
     column_name = f'i{i}'
     DATAFRAME_COLUMNS.append(column_name)
     DATAFRAME_DATATYPES[column_name] = float
 
-for m in range(20):
+for m in range(20):  # masses of the spectrum's peaks
     column_name = f'm{m}'
     DATAFRAME_COLUMNS.append(column_name)
     DATAFRAME_DATATYPES[column_name] = float
+
+for c in range(1,7):  # clumpiness predictions
+    column_name = f'c{c}'
+    DATAFRAME_COLUMNS.append(column_name)
+    DATAFRAME_DATATYPES[column_name] = float
+
 
 def _is_mzid_file(file):
     return False

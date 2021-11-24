@@ -1,15 +1,9 @@
 import numpy as np
-from scipy.optimize import minimize_scalar,OptimizeResult
+from scipy.optimize import minimize_scalar, OptimizeResult
 from src import element_count_and_mass_utils as utils
 
 ELEMENT_ROW_INDEX = 0
 ISOTOPE_COLUMN_INDEX = 1
-
-MODEL_NEUTRON_ABUNDANCE = 0
-MODEL_FFT_SS = 1
-MODEL_FFT_NORM = 2
-MODEL_CLUMPY_CARBON = 3
-MODEL_WOBBLINESSS = 4
 
 MASS_SHIFT_VARIATION_TOLERANCE = 1e-5
 NEUTRON_MASS_SHIFT_TOLERANCE = 0.002
@@ -29,6 +23,9 @@ NATURAL_ABUNDANCES = np.array([
         [0.99988,           0.00012,           0.0,         0.0, 0.0,    0.0, 0.0], # H
         [0.9493,            0.0076,            0.0429,      0.0, 0.0002, 0.0, 0.0]  # S
     ], dtype=np.float32)
+
+CLUMPY_CARBON_BOUNDS = [0.1, 0.1, 0.05, 0.0375, 0.02, 0.02, 0.02]
+
 
 # VPDB standard 13C/12C = 0.0111802 in Isodat software
 # https://www.webelements.com/sulfur/isotopes.html
@@ -111,18 +108,17 @@ def __fft_fitting_function(rna, element_counts, matrix, experimental_peaks, mode
     return distance_ss(experimental_peaks, modeled_peaks)
 
 
-# def __fft_fitting_function_clumpy_carbon(current_ratio, i, element_counts, matrix, ratios,
-#                                          fft_vector_size, experimental_peaks):
-#     ratios[i] = current_ratio
-#     matrix[ELEMENT_ROW_INDEX][:i] = ratios[:i] * matrix[ELEMENT_ROW_INDEX][0] / sum(ratios[:i])
-#     __fft(element_counts, matrix, fft_vector_size)
-#     return distance_ss(experimental_peaks, model_peaks, i + 1)
+def __fft_fitting_function_clumpy_carbon(rna, element_counts, matrix, experimental_peaks, modeled_peaks, i):
+    matrix[ELEMENT_ROW_INDEX][i] = rna
+    matrix[ELEMENT_ROW_INDEX][:i] = matrix[ELEMENT_ROW_INDEX][:i] * (1-rna) / sum(matrix[ELEMENT_ROW_INDEX][:i])
+    __fft(element_counts, matrix, modeled_peaks)
+    return distance_ss(experimental_peaks, modeled_peaks, i+1)
 
 
 def distance_ss(peaks_a:np.ndarray, peaks_b:np.ndarray, max_peak_count=9999): ##assumes normalized spectra
     shared_peak_count = min(len(peaks_a), len(peaks_b), max_peak_count)
     if not shared_peak_count:
-        return np.float32(0)
+        return 9999
 
     peaks_a = peaks_a[:shared_peak_count]
     peaks_b = peaks_b[:shared_peak_count]
@@ -130,7 +126,7 @@ def distance_ss(peaks_a:np.ndarray, peaks_b:np.ndarray, max_peak_count=9999): ##
     total_a = np.sum(peaks_a)
     total_b = np.sum(peaks_b)
     if not total_a and not total_b:
-        return 0
+        return 9999
     elif not total_a:
         return 9999
     elif not total_b:
@@ -159,29 +155,33 @@ def fit_fft(spectrum:{}, experimental_peaks:np.ndarray, element_counts:np.ndarra
     fft_vector_size = __fft_vector_len(len(experimental_peaks), element_counts)
     modeled_peaks = np.zeros(fft_vector_size, dtype=np.float32)
     # see https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize_scalar.html
-    fit:OptimizeResult = minimize_scalar(__fft_fitting_function, bounds=(0.0001, 0.15), method='Bounded',
-                                         args=(element_counts, matrix, experimental_peaks, modeled_peaks), options={'maxiter':40})
+    fit:OptimizeResult = minimize_scalar(__fft_fitting_function, bounds=(0, 0.15), method='Bounded',
+                                         args=(element_counts, matrix, experimental_peaks, modeled_peaks),
+                                         options={'maxiter':40})
     spectrum['ratio_fft'] = fit['x']
     spectrum['error_fft'] = fit['fun']
     return spectrum
 
 
-def fit_clumpy_carbon(spectrum:{}, experimental_peaks:np.ndarray, matrix:np.ndarray, element_counts:np.ndarray):
+def fit_clumpy_carbon(spectrum:{}, experimental_peaks:np.ndarray, element_counts:np.ndarray,
+                      matrix:np.ndarray = ISOTOPE_MATRIX):
     if not sum(element_counts):
         return {}
     fft_vector_size = __fft_vector_len(len(experimental_peaks), element_counts)
     matrix[ELEMENT_ROW_INDEX] = np.array([1,0,0,0,0,0,0], dtype=np.float32)
-    ratios = np.array([1,0,0,0,0,0,0], dtype=np.float32)
-    peak_count = min(6, len(experimental_peaks))
+    index_len = min(6, len(experimental_peaks)-1)
     modeled_peaks = np.zeros(fft_vector_size, dtype=np.float32)
-    for i in range(1, peak_count):
-        fit: OptimizeResult = minimize_scalar(__fft_fitting_function, bounds=(0.0001, 0.15), method='Bounded',
-                                              args=(element_counts, matrix, fft_vector_size, experimental_peaks),
+    for i in range(1, index_len):
+        fit: OptimizeResult = minimize_scalar(__fft_fitting_function_clumpy_carbon, bounds=(0, CLUMPY_CARBON_BOUNDS[i]),
+                                              method='Bounded', args=(element_counts, matrix, experimental_peaks,
+                                                                      modeled_peaks, i),
                                               options={'maxiter':40})
-        #ratio=0
-        #for i2 in range(1,i):
-        #     ratio += i2 * matrix[ELEMENT_ROW_INDEX][i2]
-        #ratio /= matrix[ELEMENT_ROW_INDEX][0]
+    ratios = matrix[ELEMENT_ROW_INDEX][1:]*range(1, len(matrix[ELEMENT_ROW_INDEX]))
+    ratios /= sum(ratios)
+    spectrum['error_clumpy'] = fit['fun']
+    for i in range(index_len):
+        spectrum[f'c{i+1}'] = ratios[i]
+    return spectrum
 
 
 def compute_spacing_and_irregularity(spectrum:{}, masses, charge):

@@ -38,25 +38,29 @@ parser.add_argument('--spectrumFile', required=True,  # type=argparse.FileType('
                          ' filenames of the associated peptide files. Alternatively, filenames of spectrum files and '
                          'peptide files (excluding extensions) must be identical.')
 parser.add_argument('--peptideFile', required=True,  # type=argparse.FileType('r'),
-                    help='search-engine-generated [.mzID] or [.target-peptide-spectrum-match] file or folder with'
+                    help='Search-engine-generated [.mzID] or [.target-peptide-spectrum-match] file or folder with'
                          ' these files.')
 parser.add_argument('--outputFile', default='calisp-output',
-                    help='the name of the folder the output gets written to. Default: calisp-output')
+                    help='The name of the folder the output gets written to. Default: calisp-output')
 parser.add_argument('--massAccuracy', default=10, type=float,
                     help='The maximum allowable mass difference between theoretical mass and experimental mass of a '
                          'peptide')
 parser.add_argument('--organismDelimiter', default='_',
-                    help='for metagenomic data, the delimiter that separates the organism ID from the protein ID '
+                    help='For metagenomic data, the delimiter that separates the organism ID from the protein ID '
                          '[default "_"]. Use "-" to ignore organism ID entirely.')
 parser.add_argument('--threads', default=4, type=int,
-                    help='number of (virtual) processors that calisp will use')
+                    help='The number of (virtual) processors that calisp will use')
 parser.add_argument('--isotope', default='13C', choices=['13C', '14C', '15N', '17O', '18O', '2H', '3H', '33S', '34S',
                                                          '36S'],
                     help='The target isotope. Default: 13C')
+parser.add_argument('--compute_clumps', default=False, action='store_true',
+                    help='To compute clumpiness of carbon assimilation. Only makes sense when labeling proceeded until'
+                         'saturation. Estimation of clumpiness takes much additional time.')
 
-args = parser.parse_args('--peptideFile /home/kinestetika/Proteomics/mock-community/Run1_All '
-                         '--spectrumFile /home/kinestetika/Proteomics/mock-community/Run1_All '
-                         '--outputFile /home/kinestetika/Proteomics/mock-community/Run1_All/calisp --threads 8'.split())
+args = parser.parse_args('--peptideFile /home/kinestetika/Proteomics/SIP/clumpy_carbon_test '
+                         '--spectrumFile /home/kinestetika/Proteomics/SIP/clumpy_carbon_test '
+                         '--compute_clumps '
+                         '--outputFile /home/kinestetika/Proteomics/SIP/clumpy_carbon_test/calisp --threads 8'.split())
 
 (spectrum_analysis_utils.ELEMENT_ROW_INDEX, spectrum_analysis_utils.ISOTOPE_COLUMN_INDEX) = {'13C': (0, 1), '14C': (0, 2),
                                                                                              '15N': (1, 1),
@@ -161,6 +165,8 @@ def subsample_ms1_spectra(task):
             masses[i] = s[f'm{i}']
         spectrum_analysis_utils.fit_relative_neutron_abundance(s, intensities, element_counts)
         spectrum_analysis_utils.fit_fft(s, intensities, element_counts)
+        if args.compute_clumps:
+            spectrum_analysis_utils.fit_clumpy_carbon(s, intensities, element_counts)
         spectrum_analysis_utils.compute_spacing_and_irregularity(s, masses, s['spectrum_charge'])
     return subsampled_spectra
 
@@ -277,7 +283,8 @@ for experiment_index in range(len(my_data_store.experiments)):
     for ms_run in ms_runs:
         ms_run_file = my_data_store.ms_run_address_book[ms_run]
         spectrum_file_counter += 1
-        psm_data_of_current_ms_run = psm_data[psm_data['ms_run'] == ms_run]
+        psm_data_of_current_ms_run = psm_data.loc[lambda df: df['ms_run'] == ms_run, :]
+        #psm_data_of_current_ms_run = psm_data[psm_data['ms_run'] == ms_run]
 
         # (2) sometimes, two psm's share the same ms2 spectrum. These are flagged here.
         flag_ambiguous_psms(psm_data_of_current_ms_run)
@@ -319,7 +326,8 @@ for experiment_index in range(len(my_data_store.experiments)):
                       'ms1_spectra_hash': ms1_spectra_hash,
                       'ms1_id_list': ms1_id_list,
                       'ms1_spectra_list': ms1_spectra_list,
-                      'psms': psm_data_of_current_ms_run[psm_data_of_current_ms_run['peptide'] == peptide],
+                      'psms': psm_data_of_current_ms_run.loc[lambda df: df['peptide'] == peptide, :],
+                      # 'psms': psm_data_of_current_ms_run[psm_data_of_current_ms_run['peptide'] == peptide],
                       } for peptide in peptides]
             spectra_reassigned_count = 0
             all_spectra = []

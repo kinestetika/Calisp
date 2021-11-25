@@ -1,4 +1,4 @@
-## Calisp.py, version 3.0.2
+## Calisp.py, version 3.0.3
 
 Calisp.py (Calgary approach to isotopes in proteomics) is a program that estimates isotopic composition (e.g. 13C/12C,
 delta13C, 15N/14N etc) of peptides from proteomics mass spectrometry data. Input data consist of mzML files and 

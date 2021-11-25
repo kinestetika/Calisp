@@ -14,7 +14,7 @@ setuptools.setup(
     description='Isotope analysis of proteomics data',
     long_description=long_description,
     long_description_content_type='text/x-rst',
-    classifiers=['Development Status :: 3 - Beta',
+    classifiers=['Development Status :: 4 - Beta',
                  'Environment :: Console',
                  'Natural Language :: English',
                  'Operating System :: OS Independent',
@@ -27,7 +27,7 @@ setuptools.setup(
     python_requires='>=3.6',
     install_requires=['numpy', 'scipy', 'pandas', 'tqdm', 'pymzml', 'pyarrow'],
     extras_require={  # Optional
-        'dev': ['setuptools', 'build'],
+        'dev': ['setuptools', 'build', 'twine'],
         'test': ['jupyter', 'matplotlib', 'jinja2'],
     },
     entry_points={  # Optional

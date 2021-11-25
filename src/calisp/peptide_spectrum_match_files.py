@@ -1,7 +1,8 @@
 import os
 import re
 import numpy as np
-from src.calisp import element_count_and_mass_utils as util, spectrum_analysis_utils
+import element_count_and_mass_utils
+import spectrum_analysis_utils
 
 UNBINNED = 'unbinned'
 
@@ -84,7 +85,7 @@ class PeptideSpectrumMatchFileReader:
                     peptide_mass_undefined = True
                     self.unknown_modifications.add(modification_definition)
                     continue
-                i = util.unimod_peptide_modifications_id(m.group(2))
+                i = element_count_and_mass_utils.unimod_peptide_modifications_id(m.group(2))
                 if i >= 0:
                     pos = 0
                     try:
@@ -92,9 +93,10 @@ class PeptideSpectrumMatchFileReader:
                     except ValueError:
                         if 'C' == m.group(1):
                             pos = len(peptide_aminoacid_sequence) - 1
-                    neutrons = util.unimod_peptide_modifications_extra_neutrons(i)
+                    neutrons = element_count_and_mass_utils.unimod_peptide_modifications_extra_neutrons(i)
                     if neutrons > 0:
-                        psm_neutrons_in_ms2_spectrum += util.unimod_peptide_modifications_extra_neutrons(i)
+                        psm_neutrons_in_ms2_spectrum += \
+                            element_count_and_mass_utils.unimod_peptide_modifications_extra_neutrons(i)
                     else:
                         peptide_modifications.append(i)
                         peptide_modification_positions.append(pos)
@@ -105,8 +107,9 @@ class PeptideSpectrumMatchFileReader:
             peptide_element_counts = np.zeros(5, dtype=np.int16)  # C, N, O, H, S
             peptide_mass = 0
             try:
-                peptide_mass = util.compute_peptide_mass(peptide_aminoacid_sequence, peptide_modifications,
-                                                         peptide_element_counts)
+                peptide_mass = element_count_and_mass_utils.compute_peptide_mass(peptide_aminoacid_sequence,
+                                                                                 peptide_modifications,
+                                                                                 peptide_element_counts)
                 psm_neutrons_in_ms2_spectrum /= peptide_element_counts[spectrum_analysis_utils.ELEMENT_ROW_INDEX]
             except KeyError:
                 peptide_element_counts = np.zeros(5, dtype=np.int16)
@@ -121,7 +124,7 @@ class PeptideSpectrumMatchFileReader:
                     'bins': ' '.join(peptide_bin_names),
                     'proteins': ' '.join(peptide_protein_names),
                     'peptide': f'{peptide_aminoacid_sequence} '
-                               f'{[util.unimod_list()[m] for m in peptide_modifications]} '
+                               f'{[element_count_and_mass_utils.unimod_list()[m] for m in peptide_modifications]} '
                                f'{peptide_modification_positions}',
                     'psm_id': psm_spectrum_id,
                     'psm_mz': psm_mz,
@@ -136,7 +139,7 @@ class PeptideSpectrumMatchFileReader:
                     'H': peptide_element_counts[3],
                     'S': peptide_element_counts[4],
                     'peptide_mass': peptide_mass,
-                    'flag_peptide_contains_sulfur': util.contains_sulfur(peptide_aminoacid_sequence),
+                    'flag_peptide_contains_sulfur': element_count_and_mass_utils.contains_sulfur(peptide_aminoacid_sequence),
                     'flag_peptide_has_modifications': len(peptide_modifications) > 0,
                     'flag_peptide_assigned_to_multiple_bins': len(peptide_bin_names) > 1,
                     'flag_peptide_assigned_to_multiple_proteins': len(peptide_protein_names) > 1,

@@ -42,13 +42,13 @@ DATAFRAME_DATATYPES = {'experiment': str,
                        'flag_peak_at_minus_one_pos': bool}
 
 DATAFRAME_COLUMNS = ['experiment', 'ms_run', 'bins', 'proteins', 'peptide', 'peptide_mass', 'C', 'N', 'O', 'H', 'S',
-                     'psm_id','psm_mz', 'psm_charge', 'psm_neutrons', 'psm_rank', 'psm_precursor_id',
+                     'psm_id', 'psm_mz', 'psm_charge', 'psm_neutrons', 'psm_rank', 'psm_precursor_id',
                      'psm_precursor_mz', 'spectrum_charge', 'spectrum_precursor_id', 'spectrum_total_intensity',
                      'spectrum_peak_count', 'spectrum_median_peak_spacing', 'spectrum_mass_irregularity',
-                     'ratio_na', 'ratio_fft','error_fft', 'error_clumpy',
+                     'ratio_na', 'ratio_fft', 'error_fft', 'error_clumpy',
                      'flag_peptide_contains_sulfur', 'flag_peptide_has_modifications',
                      'flag_peptide_assigned_to_multiple_bins', 'flag_peptide_assigned_to_multiple_proteins',
-                     'flag_peptide_mass_and_elements_undefined', 'flag_psm_has_low_confidence','flag_psm_is_ambiguous',
+                     'flag_peptide_mass_and_elements_undefined', 'flag_psm_has_low_confidence', 'flag_psm_is_ambiguous',
                      'flag_spectrum_is_contaminated', 'flag_spectrum_is_wobbly', 'flag_peak_at_minus_one_pos']
 
 for i in range(20):  # intensities of the spectrum's peaks
@@ -61,7 +61,7 @@ for m in range(20):  # masses of the spectrum's peaks
     DATAFRAME_COLUMNS.append(column_name)
     DATAFRAME_DATATYPES[column_name] = float
 
-for c in range(1,7):  # clumpiness predictions
+for c in range(1, 7):  # clumpiness predictions
     column_name = f'c{c}'
     DATAFRAME_COLUMNS.append(column_name)
     DATAFRAME_DATATYPES[column_name] = float
@@ -97,6 +97,7 @@ def _is_target_spectrum_match_file(f):
     except IsADirectoryError:
         return False
 
+
 class DataStore:
     def __init__(self):
         self.experiments = []
@@ -112,9 +113,7 @@ class DataStore:
         self.protein_hash = {}
         self.peptide_hash = {}
 
-    def set_scope_with_arguments(self, args):
-        peptide_file_stub = args.peptideFile
-        spectrum_file_stub = args.spectrumFile
+    def set_scope(self, peptide_file_stub, spectrum_file_stub):
         if os.path.isfile(peptide_file_stub):
             self.experiments.append(peptide_file_stub)
         elif os.path.isdir(peptide_file_stub):
@@ -142,12 +141,3 @@ class DataStore:
 
     def get_experiment_index(self, experiment_file_name):
         return self.experiments.index(experiment_file_name)
-
-    def add_to_store(self, item, hash, list):
-        try:
-            return hash[item]
-        except KeyError:
-            number = len(list)
-            hash[item] = number
-            list.append(item)
-            return number

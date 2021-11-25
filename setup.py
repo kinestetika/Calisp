@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='calisp',
-    version='3.0',
+    version='3.0.2',
     packages=setuptools.find_packages(where='src'),
     url='https://github.com/kinestetika/Calisp',
     license='MIT',
@@ -19,7 +19,6 @@ setuptools.setup(
                  'Framework :: Jupyter',
                  'Natural Language :: English',
                  'Operating System :: OS Independent',
-                 'Intended Audience :: Scientists',
                  'License :: OSI Approved :: MIT License',
                  'Programming Language :: Python :: 3.9',
                  'Topic :: Scientific/Engineering :: Bio-Informatics'],
@@ -28,4 +27,9 @@ setuptools.setup(
     package_dir={'': 'src'},
     python_requires='>=3.6',
     install_requires=['numpy', 'scipy', 'pandas', 'tqdm', 'pymzml', 'pyarrow'],
+    entry_points={  # Optional
+        'console_scripts': [
+            'calisp=calisp.calisp:main',
+        ],
+    }
 )

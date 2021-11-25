@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import minimize_scalar, OptimizeResult
-from src import element_count_and_mass_utils as utils
+from src.calisp import element_count_and_mass_utils as utils
 
 ELEMENT_ROW_INDEX = 0
 ISOTOPE_COLUMN_INDEX = 1
@@ -26,7 +26,6 @@ NATURAL_ABUNDANCES = np.array([
 
 CLUMPY_CARBON_BOUNDS = [0.1, 0.1, 0.05, 0.0375, 0.02, 0.02, 0.02]
 
-
 # VPDB standard 13C/12C = 0.0111802 in Isodat software
 # https://www.webelements.com/sulfur/isotopes.html
 # see also http://iupac.org/publications/pac/pdf/2003/pdf/7506x0683.pdf
@@ -34,7 +33,6 @@ CLUMPY_CARBON_BOUNDS = [0.1, 0.1, 0.05, 0.0375, 0.02, 0.02, 0.02]
 
 def compute_relative_neutron_abundance_of_non_target_isotopes(element_counts, matrix=NATURAL_ABUNDANCES):
     rna_untargeted = np.float32(0)
-
     for row in range(len(matrix)):
         for column in range(len(matrix[0])):
             if row == ELEMENT_ROW_INDEX and column == ISOTOPE_COLUMN_INDEX:
@@ -43,7 +41,7 @@ def compute_relative_neutron_abundance_of_non_target_isotopes(element_counts, ma
     return rna_untargeted
 
 
-def compute_relative_neutron_abundance(matrix, peaks, element_counts):
+def compute_relative_neutron_abundance(peaks, element_counts):
     rna = np.sum(peaks * range(len(peaks))) / np.sum(peaks)
     rna -= compute_relative_neutron_abundance_of_non_target_isotopes(element_counts)
     rna /= element_counts[ELEMENT_ROW_INDEX]
@@ -55,32 +53,32 @@ def standard_ratio():
     return ISOTOPE_MATRIX[ELEMENT_ROW_INDEX][ISOTOPE_COLUMN_INDEX] / ISOTOPE_MATRIX[ELEMENT_ROW_INDEX][0]
 
 
-def __fft(element_counts:np.ndarray, matrix:np.ndarray, modeled_peaks:np.ndarray):
+def __fft(element_counts: np.ndarray, matrix: np.ndarray, modeled_peaks: np.ndarray):
     fft_vector_size = len(modeled_peaks)
     transforms_1 = np.empty((len(matrix), fft_vector_size), dtype=np.complex64)
-    for i in range(len(matrix)): # iterate over rows (elements)
-        v = np.empty(len(matrix[0]), dtype = np.float32)
-        for j in range(len(matrix[0])): # iterate over columns (isotopes)
+    for i in range(len(matrix)):  # iterate over rows (elements)
+        v = np.empty(len(matrix[0]), dtype=np.float32)
+        for j in range(len(matrix[0])):  # iterate over columns (isotopes)
             v[j] = matrix[i][j]
-        V: np.ndarray = np.fft.fft(v, n=fft_vector_size) # norm{“backward”, “ortho”, “forward”}, optional
-        for j in range(fft_vector_size): # iterate over spectrum
-            V[j] = pow(V[j], element_counts[i])
-        transforms_1[i] = V
+        v_v: np.ndarray = np.fft.fft(v, n=fft_vector_size)  # norm{“backward”, “ortho”, “forward”}, optional
+        for j in range(fft_vector_size):  # iterate over spectrum
+            v_v[j] = pow(v_v[j], element_counts[i])
+        transforms_1[i] = v_v
     transforms_2 = np.empty(fft_vector_size, dtype=np.complex64)
-    for j in range(fft_vector_size): # iterate over spectrum
-        W = complex(1,0)
-        for i in range(len(matrix)): # iterate over rows (elements):
-            W *= transforms_1[i][j]
-        transforms_2[j] = W
-    X: np.ndarray = np.fft.ifft(transforms_2) # inverse FFT
+    for j in range(fft_vector_size):  # iterate over spectrum
+        v_w = complex(1, 0)
+        for i in range(len(matrix)):  # iterate over rows (elements):
+            v_w *= transforms_1[i][j]
+        transforms_2[j] = v_w
+    v_x: np.ndarray = np.fft.ifft(transforms_2)  # inverse FFT
     total_intensity = np.float32(0)
-    for j in range(fft_vector_size): # iterate over spectrum
-        total_intensity += X[j].real
-    for j in range(fft_vector_size): # iterate over spectrum
-        modeled_peaks[j] = X[j].real / total_intensity
+    for j in range(fft_vector_size):  # iterate over spectrum
+        total_intensity += v_x[j].real
+    for j in range(fft_vector_size):  # iterate over spectrum
+        modeled_peaks[j] = v_x[j].real / total_intensity
 
 
-def __fft_vector_len(peak_count, element_counts:np.ndarray):
+def __fft_vector_len(peak_count, element_counts: np.ndarray):
     fft_vector_len = 128
     if peak_count <= 48:
         fft_vector_len = 64
@@ -115,7 +113,7 @@ def __fft_fitting_function_clumpy_carbon(rna, element_counts, matrix, experiment
     return distance_ss(experimental_peaks, modeled_peaks, i+1)
 
 
-def distance_ss(peaks_a:np.ndarray, peaks_b:np.ndarray, max_peak_count=9999): ##assumes normalized spectra
+def distance_ss(peaks_a: np.ndarray, peaks_b: np.ndarray, max_peak_count=9999):  # assumes normalized spectra
     shared_peak_count = min(len(peaks_a), len(peaks_b), max_peak_count)
     if not shared_peak_count:
         return 9999
@@ -139,56 +137,56 @@ def distance_ss(peaks_a:np.ndarray, peaks_b:np.ndarray, max_peak_count=9999): ##
     return sum_of_squares
 
 
-def fit_relative_neutron_abundance(spectrum:{}, experimental_peaks:np.ndarray, element_counts:np.ndarray,
-                                   matrix:np.ndarray = ISOTOPE_MATRIX):
+def fit_relative_neutron_abundance(spectrum: {}, experimental_peaks: np.ndarray, element_counts: np.ndarray):
     if not sum(element_counts):
         return {}
-    rna = compute_relative_neutron_abundance(matrix, experimental_peaks, element_counts)
+    rna = compute_relative_neutron_abundance(experimental_peaks, element_counts)
     ratio = rna / (1 - rna)
     spectrum['ratio_na'] = ratio
     return spectrum
 
 
-def fit_fft(spectrum:{}, experimental_peaks:np.ndarray, element_counts:np.ndarray, matrix:np.ndarray = ISOTOPE_MATRIX):
+def fit_fft(spectrum: {}, experimental_peaks: np.ndarray, element_counts: np.ndarray,
+            matrix: np.ndarray = ISOTOPE_MATRIX):
     if not sum(element_counts):
         return {}
     fft_vector_size = __fft_vector_len(len(experimental_peaks), element_counts)
     modeled_peaks = np.zeros(fft_vector_size, dtype=np.float32)
     # see https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize_scalar.html
-    fit:OptimizeResult = minimize_scalar(__fft_fitting_function, bounds=(0, 0.15), method='Bounded',
-                                         args=(element_counts, matrix, experimental_peaks, modeled_peaks),
-                                         options={'maxiter':40})
+    fit: OptimizeResult = minimize_scalar(__fft_fitting_function, bounds=(0, 0.15), method='Bounded',
+                                          args=(element_counts, matrix, experimental_peaks, modeled_peaks),
+                                          options={'maxiter': 40})
     spectrum['ratio_fft'] = fit['x']
     spectrum['error_fft'] = fit['fun']
     return spectrum
 
 
-def fit_clumpy_carbon(spectrum:{}, experimental_peaks:np.ndarray, element_counts:np.ndarray,
-                      matrix:np.ndarray = ISOTOPE_MATRIX):
+def fit_clumpy_carbon(spectrum: {}, experimental_peaks: np.ndarray, element_counts: np.ndarray,
+                      matrix: np.ndarray = ISOTOPE_MATRIX):
     if not sum(element_counts):
         return {}
     fft_vector_size = __fft_vector_len(len(experimental_peaks), element_counts)
-    matrix[ELEMENT_ROW_INDEX] = np.array([1,0,0,0,0,0,0], dtype=np.float32)
+    matrix[ELEMENT_ROW_INDEX] = np.array([1, 0, 0, 0, 0, 0, 0], dtype=np.float32)
     index_len = min(6, len(experimental_peaks)-1)
     modeled_peaks = np.zeros(fft_vector_size, dtype=np.float32)
     for i in range(1, index_len):
         fit: OptimizeResult = minimize_scalar(__fft_fitting_function_clumpy_carbon, bounds=(0, CLUMPY_CARBON_BOUNDS[i]),
                                               method='Bounded', args=(element_counts, matrix, experimental_peaks,
                                                                       modeled_peaks, i),
-                                              options={'maxiter':40})
+                                              options={'maxiter': 40})
+        spectrum['error_clumpy'] = fit['fun']
     ratios = matrix[ELEMENT_ROW_INDEX][1:]*range(1, len(matrix[ELEMENT_ROW_INDEX]))
     ratios /= sum(ratios)
-    spectrum['error_clumpy'] = fit['fun']
     for i in range(index_len):
         spectrum[f'c{i+1}'] = ratios[i]
     return spectrum
 
 
-def compute_spacing_and_irregularity(spectrum:{}, masses, charge):
+def compute_spacing_and_irregularity(spectrum: {}, masses, charge):
     if not len(masses):
         return
     peak_mass_spacings = np.empty(len(masses)-1, dtype=np.float32)
-    for i in range(1,len(masses)):
+    for i in range(1, len(masses)):
         peak_mass_spacings[i-1] = masses[i] - masses[i-1]
     spacing_count = len(peak_mass_spacings)
     if spacing_count % 2 == 0:
@@ -197,14 +195,14 @@ def compute_spacing_and_irregularity(spectrum:{}, masses, charge):
     else:
         median_peak_spacing = peak_mass_spacings[int(spacing_count/2)]
     mass_irregularity = np.float32(0)
-    for i in range(1,len(masses)):
+    for i in range(1, len(masses)):
         spacing = masses[i] - masses[i-1]
         mass_irregularity += (spacing - median_peak_spacing)**2
     median_peak_spacing *= charge
     mass_irregularity *= charge
     mass_irregularity /= len(masses)
     is_wobbly = mass_irregularity > MASS_SHIFT_VARIATION_TOLERANCE and \
-                abs(median_peak_spacing - utils.NEUTRON_MASS_SHIFT) < NEUTRON_MASS_SHIFT_TOLERANCE
+        abs(median_peak_spacing - utils.NEUTRON_MASS_SHIFT) < NEUTRON_MASS_SHIFT_TOLERANCE
     spectrum['spectrum_median_peak_spacing'] = median_peak_spacing
     spectrum['spectrum_mass_irregularity'] = mass_irregularity
     spectrum['flag_spectrum_is_wobbly'] = is_wobbly

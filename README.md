@@ -1,4 +1,4 @@
-## Calisp.py, version 3.0
+## Calisp.py, version 3.0.2
 
 Calisp.py (Calgary approach to isotopes in proteomics) is a program that estimates isotopic composition (e.g. 13C/12C,
 delta13C, 15N/14N etc) of peptides from proteomics mass spectrometry data. Input data consist of mzML files and 
@@ -46,11 +46,11 @@ abundance data, it works well to only use those spectra that have a FFT fitting 
 
 >source calisp/bin/activate
 
->calisp.py --spectrumFile [path to .mzML file or folder with .mzML files] --peptideFile [path to .mzML file or folder 
- with .mzML files] --outputFile [path to where calisp.py will save results files] --threads [# of threads used, 
- default 4] --isotope [15N, 3H etc, default 13C], --organismDelimiter [character that separates an organism ID from the
- remainder of protein IDs, default '_'], --massAccuracy [accuracy of peak m/z identifications, default 10 ppm]
- --compute_clumps [use if you want to compute clumpiness]
+>calisp.py --spectrum_file [path to .mzML file or folder with .mzML files] --peptide_file [path to .mzML file or folder 
+ with .mzML files] --output_file [folder where calisp.py will save results files] --threads [# of threads used, 
+ default 4] --isotope [15N, 3H etc, default 13C], --bin_delimiter [character that separates the bin ID from the
+ remainder of protein IDs, default '_'], --mass_accuracy [accuracy of peak m/z identifications, default 10 ppm]
+ --compute_clumps [use only if you want to compute clumpiness]
 
 **Column names of the Pandas DataFrame created by calisp.py:**
 

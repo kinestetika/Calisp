@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='calisp',
-    version='3.0.2',
+    version='3.0.3',
     packages=setuptools.find_packages(where='src'),
     url='https://github.com/kinestetika/Calisp',
     license='MIT',
@@ -14,9 +14,8 @@ setuptools.setup(
     description='Isotope analysis of proteomics data',
     long_description=long_description,
     long_description_content_type='text/x-rst',
-    classifiers=['Development Status :: 3 - Alpha',
+    classifiers=['Development Status :: 3 - Beta',
                  'Environment :: Console',
-                 'Framework :: Jupyter',
                  'Natural Language :: English',
                  'Operating System :: OS Independent',
                  'License :: OSI Approved :: MIT License',
@@ -27,6 +26,10 @@ setuptools.setup(
     package_dir={'': 'src'},
     python_requires='>=3.6',
     install_requires=['numpy', 'scipy', 'pandas', 'tqdm', 'pymzml', 'pyarrow'],
+    extras_require={  # Optional
+        'dev': ['setuptools', 'build'],
+        'test': ['jupyter', 'matplotlib', 'jinja2'],
+    },
     entry_points={  # Optional
         'console_scripts': [
             'calisp=calisp.calisp:main',

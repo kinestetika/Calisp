@@ -1,6 +1,6 @@
 import numpy as np
 import re
-import unimod
+from calisp import unimod
 
 AMINOACID_COUNT: int = 20
 AMINOACID_ELEMENT_COUNTS = np.array([  # C, N, O, H, S

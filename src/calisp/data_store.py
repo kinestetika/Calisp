@@ -1,4 +1,5 @@
 import os.path
+import re
 from pymzml.run import Reader
 
 DATAFRAME_DATATYPES = {'experiment': str,
@@ -79,6 +80,10 @@ def _get_mzml_file_runid(file):
     parser: Reader = Reader(file)
     run_id = parser.info.get('run_id')
     parser.close()
+    m = re.match('x[0-9]{4}_', run_id)
+    if m:
+        print(f'WARNING: run id of file {file} contains escaped special character "{m.group(0)}", consider using filenames '
+              f'without special characters.')
     return run_id
 
 
@@ -132,6 +137,7 @@ class DataStore:
         for f in self.ms_runs:
             (file_name, extension) = os.path.splitext(f)
             self.ms_run_address_book[file_name] = f
+            self.ms_run_address_book[os.path.basename(file_name)] = f
             self.ms_run_address_book[_get_mzml_file_runid(f)] = f
             self.ms_run_address_book[f] = f
 

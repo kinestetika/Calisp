@@ -44,7 +44,11 @@ abundance data, it works well to only use those spectra that have a FFT fitting 
 
 >source calisp/bin/activate
 
->pip install calisp
+>pip install --upgrade calisp
+
+If you would like to explore calisp results in Jupyter notebooks, run the following command instead:
+
+>pip install --upgrade calisp jupyter matplotlib jinja2
 
 **Usage:**
 
@@ -73,6 +77,8 @@ In the saved dataframe, each row contains one spectrum, defined by the following
 
 The final 46 columns contain the normalized peak intensities ('i0' ...) and m/z of the spectrum's peaks ('m0' ...), 
 as well as the inferred clumpiness of the isotopes ('c1' ...).
+
+calisp.py was developed using [PyCharm comunity edition](https://www.jetbrains.com/pycharm/).
 
 **Please cite:**
 

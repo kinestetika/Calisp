@@ -13,7 +13,7 @@ from calisp import data_store
 from calisp import element_count_and_mass_utils
 from calisp.peptide_spectrum_match_files import PeptideSpectrumMatchFileReader
 
-VERSION = '3.0.6'
+VERSION = '3.0.7'
 START_TIME = time.monotonic()
 LOG_TOPICS = set()
 MASS_ACCURACY = 1e-5
@@ -288,7 +288,11 @@ def main():
 
         ms_runs = psm_data["ms_run"].unique()
         for ms_run in ms_runs:
-            ms_run_file = my_data_store.ms_run_address_book[ms_run]
+            try:
+                ms_run_file = my_data_store.ms_run_address_book[ms_run]
+            except KeyError:
+                print(f'WARNING: No ms-run-file associated with ms run id "{ms_run}", skipping this file.')
+                continue
             spectrum_file_counter += 1
             psm_data_of_current_ms_run = psm_data.loc[lambda df: df['ms_run'] == ms_run, :]
 

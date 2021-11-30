@@ -6,17 +6,21 @@ files with peptide spectrum matches.
 
 Calisp was originally developed in Java. This newer, python version is much more concise, it consists of only six .py 
 files, ~1,000 lines of code, compared to about fifty files and ~10,000 lines of code for the Java program. In addition,
-the Java program depends on another program, mcl, whereas calisp.py is a purely python program, which is easy to
-install, see below. The conciseness of the code makes the python version more transparent, easier to maintain and 
-easier to further develop. I consider Calisp.py is the successor of the Java version. One of the reasons to shift to 
-python is the possibility to more effectively develop machine learning approaches to filter out noisy spectra. Future
-work will explore that possibility.
+the Java program depends on another program, mcl, whereas calisp.py is purely python, which is easy to install, see below.
+The conciseness of the code makes the python version more transparent, easier to maintain and easier to further develop. 
+I consider calisp.py is the successor of the Java version. One of the reasons to shift to python is the possibility 
+to more effectively develop machine learning approaches to filter out noisy spectra. Future work will explore that 
+possibility.
 
-Benchmarking of Calisp.py has been completed. It works well. Parsing of .mzid files still needs to be implemented. 
+Benchmarking of Calisp.py has been completed. It works well, benchmarking procedures and outcomes are shared in the 
+"benchmarking" folder. Parsing of .mzid files still needs to be implemented. 
 
-Calisp.py depends on numpy, scipy, pandas, tqdm, pymzml, pyarrow. It outputs the data as a Pandas DataFrame saved in 
-(binary) feather format. From there, the user can explore and visualize the results in a Jupyter notebook. For that, a
-tutorial wil be provided.
+Calisp.py depends on numpy, scipy, pandas, tqdm, [pymzml](https://pymzml.readthedocs.io/en/latest/intro.html), pyarrow. 
+These will be installed automatically by the pip command below. 
+Calisp outputs the data as a Pandas DataFrame saved in (binary) [feather](https://arrow.apache.org/docs/python/feather.html) format. 
+From there, the user can for example explore and visualize the results in a [Jupyter notebook](https://jupyter.org/). For that, a
+tutorial wil be provided. In the meantime, you can check out the two notebooks I created for benchmarking calisp.py,
+which are in the benchmarking folder.
 
 Compared to previous versions of calisp, the workflow has been simplified. Calisp.py does not filter out any spectra, or
 adds up spectra to reduce noise - like the Java version does. It simply estimates the ratio for the target isotopes 
@@ -74,4 +78,13 @@ as well as the inferred clumpiness of the isotopes ('c1' ...).
 
 Kleiner M, Dong X, Hinzke T, Wippler J, Thorson E, Mayer B, Strous M (2018) A metaproteomics method to determine 
 carbon sources and assimilation pathways of species in microbial communities. Proceedings of the National Academy 
-of Sciences 115 (24), E5576-E5584.
+of Sciences 115 (24), E5576-E5584. 
+doi: [https://doi.org/10.1073/pnas.1722325115 ](https://doi.org/10.1073/pnas.1722325115 )
+
+Kleiner M, Kouris A, Jensen M, Liu Y, McCalder J, Strous M (2021) Ultra-sensitive Protein-SIP to quantify activity 
+and substrate uptake in microbiomes with stable isotopes. bioRxiv.
+doi: [https://doi.org/10.1101/2021.03.29.437612](https://doi.org/10.1101/2021.03.29.437612)
+
+M Kösters, J Leufken, S Schulze, K Sugimoto, J Klein, R P Zahedi, M Hippler, S A Leidel, C Fufezan; pymzML v2.0: 
+introducing a highly compressed and seekable gzip format, Bioinformatics, 
+doi: [https://doi.org/10.1093/bioinformatics/bty046](https://doi.org/10.1093/bioinformatics/bty046)

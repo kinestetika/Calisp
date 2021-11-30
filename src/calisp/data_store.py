@@ -1,5 +1,4 @@
 import os.path
-import pymzml
 from pymzml.run import Reader
 
 DATAFRAME_DATATYPES = {'experiment': str,
@@ -77,7 +76,7 @@ def _is_mzml_file(file):
 
 
 def _get_mzml_file_runid(file):
-    parser: Reader = pymzml.run.Reader(file)
+    parser: Reader = Reader(file)
     run_id = parser.info.get('run_id')
     parser.close()
     return run_id

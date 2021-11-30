@@ -1,8 +1,8 @@
 import os
 import re
 import numpy as np
-import element_count_and_mass_utils
-import spectrum_analysis_utils
+from calisp import element_count_and_mass_utils
+from calisp import spectrum_analysis_utils
 
 UNBINNED = 'unbinned'
 

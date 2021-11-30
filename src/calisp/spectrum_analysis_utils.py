@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import minimize_scalar, OptimizeResult
-from src.calisp import element_count_and_mass_utils as utils
+from calisp import element_count_and_mass_utils
 
 ELEMENT_ROW_INDEX = 0
 ISOTOPE_COLUMN_INDEX = 1
@@ -202,7 +202,7 @@ def compute_spacing_and_irregularity(spectrum: {}, masses, charge):
     mass_irregularity *= charge
     mass_irregularity /= len(masses)
     is_wobbly = mass_irregularity > MASS_SHIFT_VARIATION_TOLERANCE and \
-        abs(median_peak_spacing - utils.NEUTRON_MASS_SHIFT) < NEUTRON_MASS_SHIFT_TOLERANCE
+        abs(median_peak_spacing - element_count_and_mass_utils.NEUTRON_MASS_SHIFT) < NEUTRON_MASS_SHIFT_TOLERANCE
     spectrum['spectrum_median_peak_spacing'] = median_peak_spacing
     spectrum['spectrum_mass_irregularity'] = mass_irregularity
     spectrum['flag_spectrum_is_wobbly'] = is_wobbly

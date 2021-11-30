@@ -8,12 +8,12 @@ import pymzml
 import time
 from tqdm import tqdm
 
-import spectrum_analysis_utils
-import data_store
-import element_count_and_mass_utils as utils
-from peptide_spectrum_match_files import PeptideSpectrumMatchFileReader
+from calisp import spectrum_analysis_utils
+from calisp import data_store
+from calisp import element_count_and_mass_utils
+from calisp.peptide_spectrum_match_files import PeptideSpectrumMatchFileReader
 
-VERSION = '3.0.3'
+VERSION = '3.0.6'
 START_TIME = time.monotonic()
 LOG_TOPICS = set()
 MASS_ACCURACY = 1e-5
@@ -173,7 +173,7 @@ def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_spectra,
     for charge in range(1, 6):
         if len(prev_success) and not prev_success[charge]:
             continue
-        expected_mz = peptide_mass / charge + utils.PROTON_MASS
+        expected_mz = peptide_mass / charge + element_count_and_mass_utils.PROTON_MASS
         # (1) find monoisotopic peak
         mono_isotopic_peak = []
         mip_p = 0
@@ -189,7 +189,7 @@ def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_spectra,
             continue
         peak_moverz = [mono_isotopic_peak[0]]
         peak_intensities = [mono_isotopic_peak[1]]
-        mass_shift = utils.NEUTRON_MASS_SHIFT / charge
+        mass_shift = element_count_and_mass_utils.NEUTRON_MASS_SHIFT / charge
 
         # (2) assess presence of a peak at minus one position
         expected_mz = peak_moverz[0] - mass_shift

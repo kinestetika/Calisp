@@ -1,4 +1,4 @@
-## Calisp.py, version 3.0.7
+## Calisp.py, version 3.0.8
 
 Calisp.py (Calgary approach to isotopes in proteomics) is a program that estimates isotopic composition (e.g. 13C/12C,
 delta13C, 15N/14N etc) of peptides from proteomics mass spectrometry data. Input data consist of mzML files and 
@@ -9,34 +9,35 @@ files, ~1,000 lines of code, compared to about fifty files and ~10,000 lines of 
 the Java program depends on another program, mcl, whereas calisp.py is purely python, which is easy to install, see below.
 The conciseness of the code makes the python version more transparent, easier to maintain and easier to further develop. 
 I consider calisp.py is the successor of the Java version. One of the reasons to shift to python is the possibility 
-to more effectively develop machine learning approaches to filter out noisy spectra. Future work will explore that 
-possibility.
+to more effectively develop machine learning approaches to filter out noisy isotopic patterns. Future work will explore
+that possibility.
 
 Benchmarking of Calisp.py has been completed. It works well, benchmarking procedures and outcomes are shared in the 
-"benchmarking" folder. Parsing of .mzid files still needs to be implemented. 
+"benchmarking" folder. Parsing of .mzid files still needs to be implemented.
 
 Calisp.py depends on numpy, scipy, pandas, tqdm, [pymzml](https://pymzml.readthedocs.io/en/latest/intro.html), pyarrow. 
 These will be installed automatically by the pip command below. 
-Calisp outputs the data as a Pandas DataFrame saved in (binary) [feather](https://arrow.apache.org/docs/python/feather.html) format. 
+Calisp outputs the data as a Pandas DataFrame saved in (binary) [feather](https://arrow.apache.org/docs/python/feather.html) format.
+Each row contains a single isotopic pattern, with column definitions listed below.
 From there, the user can for example explore and visualize the results in a [Jupyter notebook](https://jupyter.org/). For that, a
 tutorial wil be provided. In the meantime, you can check out the two notebooks I created for benchmarking calisp.py,
 which are in the benchmarking folder.
 
-Compared to previous versions of calisp, the workflow has been simplified. Calisp.py does not filter out any spectra, or
-adds up spectra to reduce noise - like the Java version does. It simply estimates the ratio for the target isotopes 
-(e.g. 13C/12C) for every spectrum it can find. It estimates this ratio based on neutron abundance and using fast fourier
-transforms. The former applies to stable isotope probing experiments. The latter applies to natural abundances, or to 
-isotope probing experiments with very little added label (e.g. using substrates wiht only 1% additional 13C). The
-motivation for omitting filtering is that collecting all spectra, including bad ones, will enable training of machine 
-learning classifiers. Also, because it was shown that the median provides better estimates for species in microbial
-communities than the mean, adding up spectra to improve precision has lost its purpose. There is more power 
-(and sensitivity) in numbers.
+Compared to previous versions of calisp, the workflow has been simplified. Calisp.py does not filter out any isotopic 
+patterns, or adds up isotopic patterns to reduce noise - like the Java version does. It simply estimates the ratio for 
+the target isotopes (e.g. 13C/12C) for every isotopic pattern it can subsample. It estimates this ratio based on neutron 
+abundance and using fast fourier transforms. The former applies to stable isotope probing experiments. The latter applies 
+to natural abundances, or to isotope probing experiments with very little added label (e.g. using substrates with <1% 
+additional 13C). The motivation for omitting filtering is that keeping all subsampled isotopic patterns, including bad 
+ones, will enable training of machine learning classifiers. Also, because it was shown that the median provides better 
+estimates for species in microbial communities than the mean, adding up isotopic patterns to improve precision has lost 
+its purpose. There is more power (and sensitivity) in numbers.
 
-Because no data are filtered out and no spectra get added up, calisp.py, analyzes at least ten times as many spectra
-compared to the Java version. That means calisp.py is about ten times slower, it takes about 5-10 min per .mzML file on 
-a Desktop computer. The user can perform filtering of the data using the Jupyter notebook as desired. For natural 
-abundance data, it works well to only use those spectra that have a FFT fitting error ("error_fft") of less than 
-0.001, as previously shown for the java program.
+Because no data are filtered out and no isotopic patterns get added up, calisp.py, analyzes at least ten times as many 
+isotopic patterns compared to the Java version. That means calisp.py is about ten times slower, it takes about 5-10 min 
+per .mzML file on a Desktop computer. The user can perform filtering of the isotopic patterns using the Jupyter notebook 
+as desired. For natural abundance data, it works well to only use those spectra that have a FFT fitting error 
+("error_fft") of less than 0.001. Note that this threshold is less stringent th8en thew one used by the java program.
 
 **Installation:**
 
@@ -62,7 +63,7 @@ If you would like to explore calisp results in Jupyter notebooks, run the follow
 
 **Column names of the Pandas DataFrame created by calisp.py:**
 
-In the saved dataframe, each row contains one spectrum, defined by the following columns:
+In the saved dataframe, each row contains one isotopic pattern, defined by the following columns:
 
  'experiment', 'ms_run', 'bins', 'proteins', 'peptide', 'peptide_mass', 'C', 'N', 'O', 'H', 'S',
  'psm_id','psm_mz', 'psm_charge', 'psm_neutrons', 'psm_rank', 'psm_precursor_id',
@@ -72,10 +73,10 @@ In the saved dataframe, each row contains one spectrum, defined by the following
  'flag_peptide_contains_sulfur', 'flag_peptide_has_modifications',
  'flag_peptide_assigned_to_multiple_bins', 'flag_peptide_assigned_to_multiple_proteins',
  'flag_peptide_mass_and_elements_undefined', 'flag_psm_has_low_confidence','flag_psm_is_ambiguous',
- 'flag_spectrum_is_contaminated', 'flag_spectrum_is_wobbly', 'flag_peak_at_minus_one_pos'
+ 'flag_pattern_is_contaminated', 'flag_pattern_is_wobbly', 'flag_peak_at_minus_one_pos'
  'i0', ..., 'i19', 'm0', ..., 'm19', 'c1' ... 'c6'
 
-The final 46 columns contain the normalized peak intensities ('i0' ...) and m/z of the spectrum's peaks ('m0' ...), 
+The final 46 columns contain the normalized peak intensities ('i0' ...) and m/z of the patterns' peaks ('m0' ...), 
 as well as the inferred clumpiness of the isotopes ('c1' ...).
 
 calisp.py was developed using [PyCharm comunity edition](https://www.jetbrains.com/pycharm/).

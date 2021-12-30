@@ -2,7 +2,7 @@ import os
 import re
 import numpy as np
 from calisp import element_count_and_mass_utils
-from calisp import spectrum_analysis_utils
+from calisp import isotopic_pattern_utils
 
 UNBINNED = 'unbinned'
 
@@ -110,7 +110,7 @@ class PeptideSpectrumMatchFileReader:
                 peptide_mass = element_count_and_mass_utils.compute_peptide_mass(peptide_aminoacid_sequence,
                                                                                  peptide_modifications,
                                                                                  peptide_element_counts)
-                psm_neutrons_in_ms2_spectrum /= peptide_element_counts[spectrum_analysis_utils.ELEMENT_ROW_INDEX]
+                psm_neutrons_in_ms2_spectrum /= peptide_element_counts[isotopic_pattern_utils.ELEMENT_ROW_INDEX]
             except KeyError:
                 peptide_element_counts = np.zeros(5, dtype=np.int16)
                 peptide_mass_undefined = True

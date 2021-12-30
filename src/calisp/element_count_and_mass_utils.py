@@ -27,7 +27,8 @@ AMINOACID_ELEMENT_COUNTS = np.array([  # C, N, O, H, S
 WATER_ELEMENT_COUNTS = np.array([0, 0, 1, 2, 0], dtype=np.int64)
 AMINOACID_IDS = 'G P A V L I M C F Y W H K R Q N E D S T'.split()
 AMINOACID_INDEXES = {x: AMINOACID_IDS.index(x) for x in AMINOACID_IDS}
-ELEMENT_MASSES = np.array([12.0, 14.0030740048, 15.99491461956, 1.0078250322, 31.97207100], dtype=np.float64)
+ELEMENT_MONOISOTOPIC_MASSES = np.array([12.0, 14.0030740048, 15.99491461956, 1.0078250322, 31.972070999],
+                                       dtype=np.float64)
 AMINOACID_NAMES = 'Glycine(G) Proline(P) Alanine(A) Valine(V) Leucine(L) Isoleucine(I) Methionine(M) Cysteine(C) ' \
                   'Phenylalanine(F) Tyrosine(Y) Tryptophan(W) Histidine(H) Lysine(K) Arginine(R) Glutamine(Q) ' \
                   'Asparagine(N) Glutamate(E) Aspartate(D) Serine(S) Threonine(T)'.split()
@@ -106,7 +107,7 @@ def compute_peptide_mass(aminoacid_sequence: str, peptide_modifications, element
             element_counts[i] += modification_element_counts[i]
     mass = np.float64(0)
     for i in range(5):
-        mass += element_counts[i] * ELEMENT_MASSES[i]
+        mass += element_counts[i] * ELEMENT_MONOISOTOPIC_MASSES[i]
     return mass
 
 

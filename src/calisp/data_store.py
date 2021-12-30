@@ -20,12 +20,12 @@ DATAFRAME_DATATYPES = {'experiment': str,
                        'psm_rank': int,
                        'psm_precursor_id': int,
                        'psm_precursor_mz': float,
-                       'spectrum_charge': int,
-                       'spectrum_precursor_id': int,
-                       'spectrum_total_intensity': float,
-                       'spectrum_peak_count': int,
-                       'spectrum_median_peak_spacing': float,
-                       'spectrum_mass_irregularity': float,
+                       'pattern_charge': int,
+                       'pattern_precursor_id': int,
+                       'pattern_total_intensity': float,
+                       'pattern_peak_count': int,
+                       'pattern_median_peak_spacing': float,
+                       'pattern_mass_irregularity': float,
                        'ratio_na': float,
                        'ratio_fft': float,
                        'error_fft': float,
@@ -37,19 +37,19 @@ DATAFRAME_DATATYPES = {'experiment': str,
                        'flag_peptide_mass_and_elements_undefined': bool,
                        'flag_psm_has_low_confidence': bool,
                        'flag_psm_is_ambiguous': bool,
-                       'flag_spectrum_is_contaminated': bool,
-                       'flag_spectrum_is_wobbly': bool,
+                       'flag_pattern_is_contaminated': bool,
+                       'flag_pattern_is_wobbly': bool,
                        'flag_peak_at_minus_one_pos': bool}
 
 DATAFRAME_COLUMNS = ['experiment', 'ms_run', 'bins', 'proteins', 'peptide', 'peptide_mass', 'C', 'N', 'O', 'H', 'S',
                      'psm_id', 'psm_mz', 'psm_charge', 'psm_neutrons', 'psm_rank', 'psm_precursor_id',
-                     'psm_precursor_mz', 'spectrum_charge', 'spectrum_precursor_id', 'spectrum_total_intensity',
-                     'spectrum_peak_count', 'spectrum_median_peak_spacing', 'spectrum_mass_irregularity',
+                     'psm_precursor_mz', 'pattern_charge', 'pattern_precursor_id', 'pattern_total_intensity',
+                     'pattern_peak_count', 'pattern_median_peak_spacing', 'pattern_mass_irregularity',
                      'ratio_na', 'ratio_fft', 'error_fft', 'error_clumpy',
                      'flag_peptide_contains_sulfur', 'flag_peptide_has_modifications',
                      'flag_peptide_assigned_to_multiple_bins', 'flag_peptide_assigned_to_multiple_proteins',
                      'flag_peptide_mass_and_elements_undefined', 'flag_psm_has_low_confidence', 'flag_psm_is_ambiguous',
-                     'flag_spectrum_is_contaminated', 'flag_spectrum_is_wobbly', 'flag_peak_at_minus_one_pos']
+                     'flag_pattern_is_contaminated', 'flag_pattern_is_wobbly', 'flag_peak_at_minus_one_pos']
 
 for i in range(20):  # intensities of the spectrum's peaks
     column_name = f'i{i}'
@@ -107,15 +107,6 @@ class DataStore:
         self.experiments = []
         self.ms_runs = []
         self.ms_run_address_book = {}
-        self.bins = ['unbinned']
-        self.proteins = []
-        self.peptides = []
-        self.peptide_spectrum_matches = []
-        self.spectra = []
-        # the following are only used to speed up store construction
-        self.bin_hash = {}
-        self.protein_hash = {}
-        self.peptide_hash = {}
 
     def set_scope(self, peptide_file_stub, spectrum_file_stub):
         if os.path.isfile(peptide_file_stub):

@@ -146,7 +146,7 @@ def fit_relative_neutron_abundance(spectrum: {}, experimental_peaks: np.ndarray,
     return spectrum
 
 
-def fit_fft(spectrum: {}, experimental_peaks: np.ndarray, element_counts: np.ndarray,
+def fit_fft(pattern: {}, experimental_peaks: np.ndarray, element_counts: np.ndarray,
             matrix: np.ndarray = ISOTOPE_MATRIX):
     if not sum(element_counts):
         return {}
@@ -156,12 +156,12 @@ def fit_fft(spectrum: {}, experimental_peaks: np.ndarray, element_counts: np.nda
     fit: OptimizeResult = minimize_scalar(__fft_fitting_function, bounds=(0, 0.15), method='Bounded',
                                           args=(element_counts, matrix, experimental_peaks, modeled_peaks),
                                           options={'maxiter': 40})
-    spectrum['ratio_fft'] = fit['x']
-    spectrum['error_fft'] = fit['fun']
-    return spectrum
+    pattern['ratio_fft'] = fit['x']
+    pattern['error_fft'] = fit['fun']
+    return pattern
 
 
-def fit_clumpy_carbon(spectrum: {}, experimental_peaks: np.ndarray, element_counts: np.ndarray,
+def fit_clumpy_carbon(pattern: {}, experimental_peaks: np.ndarray, element_counts: np.ndarray,
                       matrix: np.ndarray = ISOTOPE_MATRIX):
     if not sum(element_counts):
         return {}
@@ -174,15 +174,15 @@ def fit_clumpy_carbon(spectrum: {}, experimental_peaks: np.ndarray, element_coun
                                               method='Bounded', args=(element_counts, matrix, experimental_peaks,
                                                                       modeled_peaks, i),
                                               options={'maxiter': 40})
-        spectrum['error_clumpy'] = fit['fun']
+        pattern['error_clumpy'] = fit['fun']
     ratios = matrix[ELEMENT_ROW_INDEX][1:]*range(1, len(matrix[ELEMENT_ROW_INDEX]))
     ratios /= sum(ratios)
     for i in range(index_len):
-        spectrum[f'c{i+1}'] = ratios[i]
-    return spectrum
+        pattern[f'c{i + 1}'] = ratios[i]
+    return pattern
 
 
-def compute_spacing_and_irregularity(spectrum: {}, masses, charge):
+def compute_spacing_and_irregularity(pattern: {}, masses, charge):
     if not len(masses):
         return
     peak_mass_spacings = np.empty(len(masses)-1, dtype=np.float32)
@@ -203,7 +203,7 @@ def compute_spacing_and_irregularity(spectrum: {}, masses, charge):
     mass_irregularity /= len(masses)
     is_wobbly = mass_irregularity > MASS_SHIFT_VARIATION_TOLERANCE and \
         abs(median_peak_spacing - element_count_and_mass_utils.NEUTRON_MASS_SHIFT) < NEUTRON_MASS_SHIFT_TOLERANCE
-    spectrum['spectrum_median_peak_spacing'] = median_peak_spacing
-    spectrum['spectrum_mass_irregularity'] = mass_irregularity
-    spectrum['flag_spectrum_is_wobbly'] = is_wobbly
-    return spectrum
+    pattern['pattern_median_peak_spacing'] = median_peak_spacing
+    pattern['pattern_mass_irregularity'] = mass_irregularity
+    pattern['flag_pattern_is_wobbly'] = is_wobbly
+    return pattern

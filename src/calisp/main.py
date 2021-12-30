@@ -8,12 +8,12 @@ import pymzml
 import time
 from tqdm import tqdm
 
-from calisp import spectrum_analysis_utils
+from calisp import isotopic_pattern_utils
 from calisp import data_store
 from calisp import element_count_and_mass_utils
 from calisp.peptide_spectrum_match_files import PeptideSpectrumMatchFileReader
 
-VERSION = '3.0.7'
+VERSION = '3.0.8'
 START_TIME = time.monotonic()
 LOG_TOPICS = set()
 MASS_ACCURACY = 1e-5
@@ -55,7 +55,7 @@ def parse_arguments():
 
     args = parser.parse_args()
     log(f'isotope:        {args.isotope} '
-        f'[matrix{spectrum_analysis_utils.ELEMENT_ROW_INDEX, spectrum_analysis_utils.ISOTOPE_COLUMN_INDEX}]')
+        f'[matrix{isotopic_pattern_utils.ELEMENT_ROW_INDEX, isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX}]')
     log(f'peptide_file:   {args.peptide_file}')
     log(f'spectrum_file:  {args.spectrum_file}')
     log(f'output_file:    {args.output_file}')
@@ -105,66 +105,66 @@ def set_precursor(precursors_list, my_psm_data, index):
 
 
 def subsample_ms1_spectra(task):
-    subsampled_spectra = []
+    subsampled_patterns = []
     searches_done = set()
     for psm_index in task['psms'].index:
-        # (1) subsample peptide spectra from precursor ms1 spectra
+        # (1) subsample peptide isotopic patterns from precursor ms1 spectra
         precursor_id = task['psms'].at[psm_index, 'psm_precursor_id']
         if not precursor_id or task['psms'].at[psm_index, 'flag_peptide_mass_and_elements_undefined']:
             continue
         peptide_mass = task['psms'].at[psm_index, 'peptide_mass']
         precursor_i = task['ms1_spectra_hash'][precursor_id]
-        initial_success = subsample_ms1_spectrum(precursor_i, psm_index, task, [], subsampled_spectra, peptide_mass,
+        initial_success = subsample_ms1_spectrum(precursor_i, psm_index, task, [], subsampled_patterns, peptide_mass,
                                                  searches_done)
         prev_success = initial_success
         # (success is a list of booleans, one boolean for each charge 1..5)
         for i in range(precursor_i+1, min(precursor_i+40, len(task['ms1_spectra_list']))):
-            prev_success = subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_spectra, peptide_mass,
+            prev_success = subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_patterns, peptide_mass,
                                                   searches_done)
             if not sum(prev_success):
                 break
         prev_success = initial_success
         for i in range(precursor_i-1, max(0, precursor_i-40), -1):
-            prev_success = subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_spectra, peptide_mass,
+            prev_success = subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_patterns, peptide_mass,
                                                   searches_done)
             if not sum(prev_success):
                 break
-    for s in subsampled_spectra:
-        # (2) assign spectra to the nearest psm:
-        nearest_psm_index = s['psm_index']  # this is the psm for which the spectrum was discovered
+    for p in subsampled_patterns:
+        # (2) assign isotopic patterns to the nearest psm:
+        nearest_psm_index = p['psm_index']  # this is the psm for which the isotopic pattern was discovered
         shortest_distance = 999999
         if len(task['psms'].index) > 1:
-            i_spe = task['ms1_spectra_hash'][s['spectrum_precursor_id']]
+            i_spe = task['ms1_spectra_hash'][p['pattern_precursor_id']]
             for psm_index in task['psms'].index:  # these are all the psms associated with the peptide
                 i_psm = task['ms1_spectra_hash'][task['psms'].at[psm_index, 'psm_precursor_id']]
-                distance_psm_to_spectrum = (abs(i_psm - i_spe)+1) * (abs(task['psms'].at[psm_index, 'psm_charge']
-                                                                         - s['spectrum_charge']) + 1)
-                if distance_psm_to_spectrum < shortest_distance:
-                    shortest_distance = distance_psm_to_spectrum
+                distance_psm_to_pattern = (abs(i_psm - i_spe)+1) * (abs(task['psms'].at[psm_index, 'psm_charge']
+                                                                         - p['pattern_charge']) + 1)
+                if distance_psm_to_pattern < shortest_distance:
+                    shortest_distance = distance_psm_to_pattern
                     nearest_psm_index = psm_index
-            if nearest_psm_index != s['psm_index']:
-                s['reassigned'] = True
-        del s['psm_index']
+            if nearest_psm_index != p['psm_index']:
+                p['reassigned'] = True
+        del p['psm_index']
         for key, value in task['psms'].loc[nearest_psm_index].to_dict().items():
-            if key in s.keys():
+            if key in p.keys():
                 continue
-            s[key] = value
+            p[key] = value
         # (3) analyze isotopes:
-        element_counts = np.array([s['C'], s['N'], s['O'], s['H'], s['S']], dtype=np.int16)
-        intensities = np.empty(s['spectrum_peak_count'], dtype=np.float32)
-        masses = np.empty(s['spectrum_peak_count'], dtype=np.float32)
-        for i in range(s['spectrum_peak_count']):
-            intensities[i] = s[f'i{i}']
-            masses[i] = s[f'm{i}']
-        spectrum_analysis_utils.fit_relative_neutron_abundance(s, intensities, element_counts)
-        spectrum_analysis_utils.fit_fft(s, intensities, element_counts)
+        element_counts = np.array([p['C'], p['N'], p['O'], p['H'], p['S']], dtype=np.int16)
+        intensities = np.empty(p['pattern_peak_count'], dtype=np.float32)
+        masses = np.empty(p['pattern_peak_count'], dtype=np.float32)
+        for i in range(p['pattern_peak_count']):
+            intensities[i] = p[f'i{i}']
+            masses[i] = p[f'm{i}']
+        isotopic_pattern_utils.fit_relative_neutron_abundance(p, intensities, element_counts)
+        isotopic_pattern_utils.fit_fft(p, intensities, element_counts)
         if COMPUTE_CLUMPS:
-            spectrum_analysis_utils.fit_clumpy_carbon(s, intensities, element_counts)
-        spectrum_analysis_utils.compute_spacing_and_irregularity(s, masses, s['spectrum_charge'])
-    return subsampled_spectra
+            isotopic_pattern_utils.fit_clumpy_carbon(p, intensities, element_counts)
+        isotopic_pattern_utils.compute_spacing_and_irregularity(p, masses, p['pattern_charge'])
+    return subsampled_patterns
 
 
-def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_spectra, peptide_mass, searches_done):
+def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_patterns, peptide_mass, searches_done):
     success = [False, False, False, False, False, False]
     if i in searches_done:
         return success
@@ -201,7 +201,7 @@ def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_spectra,
             elif peak[0] < expected_mz:
                 break
 
-        # (3) find remainder of spectrum
+        # (3) find remainder of isotopic patterns
         for q in range(mip_p+1, len(ms1_peaks)):
             peak = ms1_peaks[q]
             # calculating distance from monoisotopic is slightly better than peak-to-peak
@@ -213,40 +213,40 @@ def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_spectra,
                 break
 
         if len(peak_moverz) >= 4:
-            # normalize spectrum
+            # normalize isotopic pattern
             peak_intensities = peak_intensities[:20]
             peak_moverz = peak_moverz[:20]
             total_intensity = sum(peak_intensities)
             peak_intensities /= total_intensity
-            # assign spectrum to the closest psm
-            # bundle subsampled spectrum as a dictionary
-            subsampled_spectrum = {'psm_index': psm_index,
-                                   'spectrum_charge': charge,
-                                   'spectrum_total_intensity': total_intensity,
-                                   'spectrum_precursor_id': task['ms1_id_list'][i],
-                                   'spectrum_peak_count': len(peak_intensities),
-                                   'flag_spectrum_is_contaminated': False,
-                                   'flag_spectrum_is_wobbly': False,
+            # assign isotopic pattern to the closest psm
+            # bundle subsampled isotopic pattern as a dictionary
+            subsampled_pattern = {'psm_index': psm_index,
+                                   'pattern_charge': charge,
+                                   'pattern_total_intensity': total_intensity,
+                                   'pattern_precursor_id': task['ms1_id_list'][i],
+                                   'pattern_peak_count': len(peak_intensities),
+                                   'flag_pattern_is_contaminated': False,
+                                   'flag_pattern_is_wobbly': False,
                                    'flag_peak_at_minus_one_pos': peak_at_minus_one,
                                    'reassigned': False}
             for p in range(len(peak_intensities)):
-                subsampled_spectrum[f'i{p}'] = peak_intensities[p]
-                subsampled_spectrum[f'm{p}'] = peak_moverz[p]
-            subsampled_spectra.append(subsampled_spectrum)
+                subsampled_pattern[f'i{p}'] = peak_intensities[p]
+                subsampled_pattern[f'm{p}'] = peak_moverz[p]
+            subsampled_patterns.append(subsampled_pattern)
             success[charge] = True
     return success
 
 
 def submit_for_overlap_detection(task):
-    shared_spectra = task['spectra']
-    for i in range(len(shared_spectra.index)):
-        ii = shared_spectra.index[i]
-        mii = set(shared_spectra.loc[ii,
-                  'm0':f'm{shared_spectra.at[ii, "spectrum_peak_count"] - 1}'].values)
-        for j in range(i + 1, len(shared_spectra.index)):
-            jj = shared_spectra.index[j]
-            mjj = set(shared_spectra.loc[jj,
-                      'm0':f'm{shared_spectra.at[jj, "spectrum_peak_count"] - 1}'].values)
+    shared_patterns = task['patterns from same spectrum']
+    for i in range(len(shared_patterns.index)):
+        ii = shared_patterns.index[i]
+        mii = set(shared_patterns.loc[ii,
+                  'm0':f'm{shared_patterns.at[ii, "pattern_peak_count"] - 1}'].values)
+        for j in range(i + 1, len(shared_patterns.index)):
+            jj = shared_patterns.index[j]
+            mjj = set(shared_patterns.loc[jj,
+                      'm0':f'm{shared_patterns.at[jj, "pattern_peak_count"] - 1}'].values)
             if mjj.intersection(mii):
                 return [ii, jj]
     return []
@@ -255,7 +255,7 @@ def submit_for_overlap_detection(task):
 def main():
     log(f'This is calisp.py {VERSION}')
     args = parse_arguments()
-    (spectrum_analysis_utils.ELEMENT_ROW_INDEX, spectrum_analysis_utils.ISOTOPE_COLUMN_INDEX) = \
+    (isotopic_pattern_utils.ELEMENT_ROW_INDEX, isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX) = \
         {'13C': (0, 1), '14C': (0, 2),
          '15N': (1, 1),
          '17O': (2, 1), '18O': (2, 2),
@@ -315,21 +315,21 @@ def main():
                         ms1_spectra_list.append(spectrum.peaks('centroided'))
                     elif spectrum.ms_level == 2:
                         ms2_spectra_precursors[spectrum.ID] = spectrum.selected_precursors
-            psm_with_spectrum_count = 0
+            psm_with_ms1_spectrum_count = 0
             for psm_index in psm_data_of_current_ms_run.index:
                 try:
-                    psm_with_spectrum_count += set_precursor(ms2_spectra_precursors[
+                    psm_with_ms1_spectrum_count += set_precursor(ms2_spectra_precursors[
                                                                  psm_data_of_current_ms_run.at[psm_index, 'psm_id']],
                                                              psm_data_of_current_ms_run, psm_index)
                 except KeyError:
                     pass
-            log(f'({psm_with_spectrum_count}/{len(psm_data_of_current_ms_run.index)}) PSMs have precursor MS1 spectrum')
-            log(f'Now subsampling peptide spectra for {len(psm_data_of_current_ms_run.index)} PSMs from '
+            log(f'({psm_with_ms1_spectrum_count}/{len(psm_data_of_current_ms_run.index)}) PSMs have precursor MS1 spectrum')
+            log(f'Now subsampling MS1 spectra for {len(psm_data_of_current_ms_run.index)} PSM patterns from '
                 f'{len(ms1_spectra_list)} MS1 spectra, using {args.threads} threads for isotope analysis, '
                 f'first prepping tasks for parallel execution...')
 
-            spectra_data = pd.DataFrame(columns=data_store.DATAFRAME_COLUMNS)
-            spectra_data = spectra_data.astype(data_store.DATAFRAME_DATATYPES)
+            pattern_data = pd.DataFrame(columns=data_store.DATAFRAME_COLUMNS)
+            pattern_data = pattern_data.astype(data_store.DATAFRAME_DATATYPES)
             with ProcessPoolExecutor(max_workers=args.threads) as executor:
                 peptides = psm_data_of_current_ms_run['peptide'].unique()
                 tasks = [{'peptide': peptide,
@@ -339,37 +339,37 @@ def main():
                           'psms': psm_data_of_current_ms_run.loc[lambda df: df['peptide'] == peptide, :],
                           # 'psms': psm_data_of_current_ms_run[psm_data_of_current_ms_run['peptide'] == peptide],
                           } for peptide in peptides]
-                spectra_reassigned_count = 0
-                all_spectra = []
-                for spectra in list(tqdm(executor.map(subsample_ms1_spectra, tasks, chunksize=25), total=len(tasks))):
-                    for s in spectra:
-                        if s['reassigned']:
-                            spectra_reassigned_count += 1
-                        del s['reassigned']
-                    all_spectra.extend(spectra)
-            spectra_data = spectra_data.append(all_spectra, ignore_index=True)
-            log(f'Subsampled and analyzed {len(spectra_data.index)} spectra, '
-                f'reassigned {spectra_reassigned_count / len(spectra_data.index) * 100:.1f}% of spectra to '
-                f'their nearest PSM. Now flagging overlap between spectra...')
+                patterns_reassigned_count = 0
+                all_patterns = []
+                for patterns in list(tqdm(executor.map(subsample_ms1_spectra, tasks, chunksize=25), total=len(tasks))):
+                    for p in patterns:
+                        if p['reassigned']:
+                            patterns_reassigned_count += 1
+                        del p['reassigned']
+                    all_patterns.extend(patterns)
+            pattern_data = pattern_data.append(all_patterns, ignore_index=True)
+            log(f'Subsampled and analyzed {len(pattern_data.index)} isotopic patterns, '
+                f'reassigned {patterns_reassigned_count / len(pattern_data.index) * 100:.1f}% of patterns to '
+                f'their nearest PSM. Now flagging overlap between patterns...')
 
             # (4) check for contamination (the same ms1 peaks shared by multiple peptide spectra
             with ProcessPoolExecutor(max_workers=args.threads) as executor:
-                precursor_ids = spectra_data['spectrum_precursor_id'].unique()
-                tasks = [{'spectra': spectra_data[spectra_data['spectrum_precursor_id'] == i]
+                precursor_ids = pattern_data['pattern_precursor_id'].unique()
+                tasks = [{'patterns from same spectrum': pattern_data[pattern_data['pattern_precursor_id'] == i]
                           } for i in precursor_ids]
                 for indexes in list(tqdm(executor.map(
                         submit_for_overlap_detection, tasks, chunksize=25), total=len(tasks))):
                     for index in indexes:
-                        spectra_data.at[index, 'flag_spectrum_is_contaminated'] = True
-            co = len(spectra_data.loc[lambda df: df["flag_spectrum_is_contaminated"], :]) / len(spectra_data) * 100
-            wo = len(spectra_data.loc[lambda df: df["flag_spectrum_is_wobbly"], :]) / len(spectra_data) * 100
-            log(f'Contamination found for {co:.1f}% of all spectra. Wobbly spectra make up {wo:.1f}% of all spectra.')
+                        pattern_data.at[index, 'flag_pattern_is_contaminated'] = True
+            co = len(pattern_data.loc[lambda df: df["flag_pattern_is_contaminated"], :]) / len(pattern_data) * 100
+            wo = len(pattern_data.loc[lambda df: df["flag_pattern_is_wobbly"], :]) / len(pattern_data) * 100
+            log(f'Contamination found for {co:.1f}% of subsampled patterns. Wobbly patterns make up {wo:.1f}%.')
             ms_run_results_file = os.path.join(args.output_file,
                                                os.path.splitext(os.path.basename(ms_run_file))[0] + '.feather')
-            log(f'Saving pandas dataframe with {len(spectra_data.index)} spectra to f{ms_run_results_file} '
+            log(f'Saving pandas dataframe with {len(pattern_data.index)} analyzed patterns to f{ms_run_results_file} '
                 f'in feather format...')
-            spectra_data.to_feather(ms_run_results_file)
-    log(f'Done. Thanks for using Calisp!')
+            pattern_data.to_feather(ms_run_results_file)
+    log(f'Done. Thanks for using calisp!')
 
 
 if __name__ == "__main__":

@@ -56,8 +56,8 @@ If you would like to explore calisp results in Jupyter notebooks, run the follow
 >source calisp/bin/activate
 
 >calisp.py --spectrum_file [path to .mzML file or folder with .mzML files] --peptide_file [path to .mzML file or folder 
- with .mzML files] --output_file [folder where calisp.py will save results files] --threads [# of threads used, 
- default 4] --isotope [15N, 3H etc, default 13C], --bin_delimiter [character that separates the bin ID from the
+ with .PeptideSpectrumMatch files] --output_file [folder where calisp.py will save results files] --threads [# of threads 
+ used, default 4] --isotope [15N, 3H etc, default 13C], --bin_delimiter [character that separates the bin ID from the
  remainder of protein IDs, default '_'], --mass_accuracy [accuracy of peak m/z identifications, default 10 ppm]
  --compute_clumps [use only if you want to compute clumpiness]
 

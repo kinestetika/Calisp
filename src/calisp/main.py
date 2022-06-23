@@ -13,7 +13,7 @@ from calisp import data_store
 from calisp import element_count_and_mass_utils
 from calisp.peptide_spectrum_match_files import PeptideSpectrumMatchFileReader
 
-VERSION = '3.0.8'
+VERSION = '3.0.9'
 START_TIME = time.monotonic()
 LOG_TOPICS = set()
 MASS_ACCURACY = 1e-5
@@ -54,6 +54,7 @@ def parse_arguments():
                              'saturation. Estimation of clumpiness takes much additional time.')
 
     args = parser.parse_args()
+
     log(f'isotope:        {args.isotope} '
         f'[matrix{isotopic_pattern_utils.ELEMENT_ROW_INDEX, isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX}]')
     log(f'peptide_file:   {args.peptide_file}')
@@ -282,7 +283,8 @@ def main():
                 psm_as_dict.append(psm)
         psm_data = pd.DataFrame(columns=data_store.DATAFRAME_COLUMNS)
         psm_data = psm_data.astype(data_store.DATAFRAME_DATATYPES)
-        psm_data = psm_data.append(psm_as_dict, ignore_index=True)
+        psm_data = pd.concat([psm_data, pd.DataFrame(psm_as_dict)], ignore_index=True)
+        # psm_data.append(psm_as_dict, ignore_index=True)
         log(f'Parsed {len(psm_data.index)} PSMs from file.')
         spectrum_file_counter = 0
 
@@ -347,7 +349,8 @@ def main():
                             patterns_reassigned_count += 1
                         del p['reassigned']
                     all_patterns.extend(patterns)
-            pattern_data = pattern_data.append(all_patterns, ignore_index=True)
+            pattern_data = pd.concat([pattern_data, pd.DataFrame(all_patterns)], ignore_index=True)
+            # pattern_data = pattern_data.append(all_patterns, ignore_index=True)
             log(f'Subsampled and analyzed {len(pattern_data.index)} isotopic patterns, '
                 f'reassigned {patterns_reassigned_count / len(pattern_data.index) * 100:.1f}% of patterns to '
                 f'their nearest PSM. Now flagging overlap between patterns...')

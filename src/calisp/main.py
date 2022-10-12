@@ -1,11 +1,11 @@
 import argparse
 import os
 from concurrent.futures import ProcessPoolExecutor
+import time
 
 import numpy as np
 import pandas as pd
 import pymzml
-import time
 from tqdm import tqdm
 
 from calisp import isotopic_pattern_utils
@@ -54,6 +54,13 @@ def parse_arguments():
                              'saturation. Estimation of clumpiness takes much additional time.')
 
     args = parser.parse_args()
+
+    (isotopic_pattern_utils.ELEMENT_ROW_INDEX, isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX) = \
+        {'13C': (0, 1), '14C': (0, 2),
+         '15N': (1, 1),
+         '17O': (2, 1), '18O': (2, 2),
+         '2H': (3, 1), '3H': (3, 2),
+         '33S': (4, 1), '34S': (4, 2), '36S': (4, 4)}[args.isotope]
 
     log(f'isotope:        {args.isotope} '
         f'[matrix{isotopic_pattern_utils.ELEMENT_ROW_INDEX, isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX}]')
@@ -166,7 +173,7 @@ def subsample_ms1_spectra(task):
 
 
 def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_patterns, peptide_mass, searches_done):
-    success = [False, False, False, False, False, False]
+    success = [False, False, False, False, False, False]  # the index is the charge
     if i in searches_done:
         return success
     searches_done.add(i)
@@ -256,12 +263,6 @@ def submit_for_overlap_detection(task):
 def main():
     log(f'This is calisp.py {VERSION}')
     args = parse_arguments()
-    (isotopic_pattern_utils.ELEMENT_ROW_INDEX, isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX) = \
-        {'13C': (0, 1), '14C': (0, 2),
-         '15N': (1, 1),
-         '17O': (2, 1), '18O': (2, 2),
-         '2H': (3, 1), '3H': (3, 2),
-         '33S': (4, 1), '34S': (4, 2), '36S': (4, 4)}[args.isotope]
     global MASS_ACCURACY, COMPUTE_CLUMPS
     MASS_ACCURACY = args.mass_accuracy
     COMPUTE_CLUMPS = args.compute_clumps
@@ -302,13 +303,13 @@ def main():
             flag_ambiguous_psms(psm_data_of_current_ms_run)
 
             # (3) read the ms_run file to grab currently unknown precursor ids for the known ms2 spectra as well as
-            # collect all the ms1 spectra for subsampling, then: subsample.
+            # collect all the complete ms1 spectra for pattern sampling,
             log(f'Now parsing ({spectrum_file_counter}/{len(ms_runs)}) spectrum files to find '
                 f'{len(psm_data_of_current_ms_run.index)} MS1 precursors, "{os.path.basename(ms_run_file)}"...')
-            ms1_spectra_hash = {}
-            ms1_id_list = []
-            ms1_spectra_list = []
-            ms2_spectra_precursors = {}
+            ms1_spectra_hash = {}  # this is a hash translating ms1 precursor # to the correct index in ms1_spectra_list
+            ms1_id_list = []       # this is to translate in the other direction, from index to precursor #
+            ms1_spectra_list = []  # this is for storing the complete ms1 spectra
+            ms2_spectra_precursors = {} # this translates from ms2 id to ms1 precursor #
             with pymzml.run.Reader(ms_run_file) as mzml_reader:
                 for spectrum in mzml_reader:
                     if spectrum.ms_level == 1:
@@ -326,14 +327,14 @@ def main():
                 except KeyError:
                     pass
             log(f'({psm_with_ms1_spectrum_count}/{len(psm_data_of_current_ms_run.index)}) PSMs have precursor MS1 spectrum')
-            log(f'Now subsampling MS1 spectra for {len(psm_data_of_current_ms_run.index)} PSM patterns from '
+            log(f'Now subsampling MS1 spectra for {len(psm_data_of_current_ms_run.index)} peptide isotope patterns from '
                 f'{len(ms1_spectra_list)} MS1 spectra, using {args.threads} threads for isotope analysis, '
                 f'first prepping tasks for parallel execution...')
-
+            # (4) sample the patterns from the ms file. pattern_data is where the final output is stored
             pattern_data = pd.DataFrame(columns=data_store.DATAFRAME_COLUMNS)
             pattern_data = pattern_data.astype(data_store.DATAFRAME_DATATYPES)
             with ProcessPoolExecutor(max_workers=args.threads) as executor:
-                peptides = psm_data_of_current_ms_run['peptide'].unique()
+                peptides = psm_data_of_current_ms_run['peptide'].unique()  # analyze peptide by peptide
                 tasks = [{'peptide': peptide,
                           'ms1_spectra_hash': ms1_spectra_hash,
                           'ms1_id_list': ms1_id_list,

@@ -13,7 +13,7 @@ from calisp import data_store
 from calisp import element_count_and_mass_utils
 from calisp.peptide_spectrum_match_files import PeptideSpectrumMatchFileReader
 
-VERSION = '3.0.9'
+VERSION = '3.0.10'
 START_TIME = time.monotonic()
 LOG_TOPICS = set()
 MASS_ACCURACY = 1e-5
@@ -111,14 +111,21 @@ def set_precursor(precursors_list, my_psm_data, index):
                 log(k, precursor_dict[k])
     return 0
 
+# TOTAL_CHARGE_TRIALS = 0
+# NO_MONOISOTOPIC_PEAK = 0
+# MASS_UNDEFINED = 0
+# TOO_FEW_PEAKS = 0
+
 
 def subsample_ms1_spectra(task):
+    # global MASS_UNDEFINED
     subsampled_patterns = []
     searches_done = set()
     for psm_index in task['psms'].index:
         # (1) subsample peptide isotopic patterns from precursor ms1 spectra
         precursor_id = task['psms'].at[psm_index, 'psm_precursor_id']
         if not precursor_id or task['psms'].at[psm_index, 'flag_peptide_mass_and_elements_undefined']:
+            # MASS_UNDEFINED += 1
             continue
         peptide_mass = task['psms'].at[psm_index, 'peptide_mass']
         precursor_i = task['ms1_spectra_hash'][precursor_id]
@@ -173,12 +180,14 @@ def subsample_ms1_spectra(task):
 
 
 def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_patterns, peptide_mass, searches_done):
+    # global NO_MONOISOTOPIC_PEAK, TOTAL_CHARGE_TRIALS, TOO_FEW_PEAKS
     success = [False, False, False, False, False, False]  # the index is the charge
     if i in searches_done:
         return success
     searches_done.add(i)
     ms1_peaks = task['ms1_spectra_list'][i]
     for charge in range(1, 6):
+        # TOTAL_CHARGE_TRIALS += 1
         if len(prev_success) and not prev_success[charge]:
             continue
         expected_mz = peptide_mass / charge + element_count_and_mass_utils.PROTON_MASS
@@ -194,6 +203,7 @@ def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_patterns
             elif peak[0] > expected_mz:
                 break
         if not len(mono_isotopic_peak):
+            # NO_MONOISOTOPIC_PEAK += 1
             continue
         peak_moverz = [mono_isotopic_peak[0]]
         peak_intensities = [mono_isotopic_peak[1]]
@@ -242,6 +252,8 @@ def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_patterns
                 subsampled_pattern[f'm{p}'] = peak_moverz[p]
             subsampled_patterns.append(subsampled_pattern)
             success[charge] = True
+        # else:
+            # TOO_FEW_PEAKS += 1
     return success
 
 
@@ -344,6 +356,9 @@ def main():
                           } for peptide in peptides]
                 patterns_reassigned_count = 0
                 all_patterns = []
+
+                # for t in tqdm(tasks):
+                #    patterns = subsample_ms1_spectra(t)
                 for patterns in list(tqdm(executor.map(subsample_ms1_spectra, tasks, chunksize=25), total=len(tasks))):
                     for p in patterns:
                         if p['reassigned']:
@@ -351,9 +366,13 @@ def main():
                         del p['reassigned']
                     all_patterns.extend(patterns)
             pattern_data = pd.concat([pattern_data, pd.DataFrame(all_patterns)], ignore_index=True)
-            # pattern_data = pattern_data.append(all_patterns, ignore_index=True)
-            log(f'Subsampled and analyzed {len(pattern_data.index)} isotopic patterns, '
-                f'reassigned {patterns_reassigned_count / len(pattern_data.index) * 100:.1f}% of patterns to '
+            # log(f'undefined mass {MASS_UNDEFINED}; no monoisotopic peak {NO_MONOISOTOPIC_PEAK}/{TOTAL_CHARGE_TRIALS}; too few peaks: {TOO_FEW_PEAKS}')
+            log(f'Subsampled and analyzed {len(pattern_data.index)} isotopic patterns, ')
+            if not len(pattern_data.index):
+                log('No patterns found, no output will be created for this spectrum file. This is unusual. This may'
+                    'be caused by a problem with the Calisp code or with the peptide file format.')
+                continue
+            log(f'Reassigned {patterns_reassigned_count / len(pattern_data.index) * 100:.1f}% of patterns to '
                 f'their nearest PSM. Now flagging overlap between patterns...')
 
             # (4) check for contamination (the same ms1 peaks shared by multiple peptide spectra

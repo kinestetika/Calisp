@@ -5,7 +5,7 @@ from calisp import element_count_and_mass_utils
 from calisp import isotopic_pattern_utils
 
 UNBINNED = 'unbinned'
-
+PATTERN_BOUNDARY_AA = re.compile('\[[A-Z]]')
 
 class PeptideSpectrumMatchFileReader:
     def __init__(self, experiment_file_name, bin_delimiter='_'):
@@ -57,6 +57,7 @@ class PeptideSpectrumMatchFileReader:
             psm_is_ambiguous = 'unambiguous' != words[self.columns['PSM Ambiguity']].lower()
 
             peptide_aminoacid_sequence = words[self.columns['Annotated Sequence']].upper()
+            peptide_aminoacid_sequence = re.sub(PATTERN_BOUNDARY_AA, '', peptide_aminoacid_sequence).strip('.')
             peptide_modifications = []
             peptide_modification_positions = []
             ms_run_name = words[self.columns['Spectrum File']]

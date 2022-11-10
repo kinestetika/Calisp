@@ -64,20 +64,51 @@ If you would like to explore calisp results in Jupyter notebooks, run the follow
 **Column names of the Pandas DataFrame created by calisp.py:**
 
 In the saved dataframe, each row contains one isotopic pattern, defined by the following columns:
-
- 'experiment', 'ms_run', 'bins', 'proteins', 'peptide', 'peptide_mass', 'C', 'N', 'O', 'H', 'S',
- 'psm_id','psm_mz', 'psm_charge', 'psm_neutrons', 'psm_rank', 'psm_precursor_id',
- 'psm_precursor_mz', 'spectrum_charge', 'spectrum_precursor_id', 'spectrum_total_intensity',
- 'spectrum_peak_count', 'spectrum_median_peak_spacing', 'spectrum_mass_irregularity',
- 'ratio_na', 'ratio_fft','error_fft', 'error_clumpy'
- 'flag_peptide_contains_sulfur', 'flag_peptide_has_modifications',
- 'flag_peptide_assigned_to_multiple_bins', 'flag_peptide_assigned_to_multiple_proteins',
- 'flag_peptide_mass_and_elements_undefined', 'flag_psm_has_low_confidence','flag_psm_is_ambiguous',
- 'flag_pattern_is_contaminated', 'flag_pattern_is_wobbly', 'flag_peak_at_minus_one_pos'
- 'i0', ..., 'i19', 'm0', ..., 'm19', 'c1' ... 'c6'
-
-The final 46 columns contain the normalized peak intensities ('i0' ...) and m/z of the patterns' peaks ('m0' ...), 
-as well as the inferred clumpiness of the isotopes ('c1' ...).
+```
+experiment             filename of the peptide spectrum match (psm) file
+ms_run                 filename of the .mzml file
+bins                   bin/mag ids, separated by commas. Calisp expects the protein ids in the psm file to consist of two parts,
+                       separated by a delimiter (_ by default). The first part is the bin/mag id, the second part the protein id
+proteins               the ids of the proteins associated with the pattern (without the bin id)
+peptide                the aminoacid sequence of the peptide
+peptide_mass           the mass of the peptide
+C                       # of carbon atoms in the peptide
+N                       # of nitrogen atoms in the peptide
+O                       # of oxygen atoms in the peptide
+H                       # of hydrogen atoms in the peptide
+S                       # of sulfur atoms in the peptide
+psm_id                  psm id
+psm_mz                  psm m over z
+psm_charge              psm charge
+psm_neutrons            number of neutrons inferred from custom 'neutron' modifications 
+psm_rank                rank of the psm
+psm_precursor_id        id of the ms1 spectrum that was the source of the psm 
+psm_precursor_mz        mass over charge of the precursor of the psm
+pattern_charge          charge of the pattern
+pattern_precursor_id    id of the ms1 spectrum that was the source of the pattern
+pattern_total_intensity total intensity of the pattern
+pattern_peak_count      # of peaks in the pattern
+pattern_median_peak_spacing medium mass difference between a pattern's peaks
+spectrum_mass_irregularity  a measure for the standard deviation in the mass difference between a pattern's peaks
+ratio_na                the estimated isotope ratio inferred from neutron abundance (sip experiments) 
+ratio_fft               the estimated isotope ratio inferred by the fft method (natural isotope abundances)
+error_fft               the remaining error after fitting the pattern with fft
+error_clumpy            the remaining error after fitting the pattern with the clumpy carbon method
+flag_peptide_contains_sulfur true if peptide contains sulfur
+flag_peptide_has_modifications true if peptide has no modifications
+flag_peptide_assigned_to_multiple_bins true if peptide is associated with multiple proteins from different bins/mags
+flag_peptide_assigned_to_multiple_proteins true if peptide is associated with multiple proteins
+flag_peptide_mass_and_elements_undefined true if peptide has unknown mass and elemental composition
+flag_psm_has_low_confidence true if psm was flagged as having low confidence (peptide identity uncertain)
+flag_psm_is_ambiguous   true if psm could not be assigned with certainty
+flag_pattern_is_contaminated true if multiple patterns have one or more shared peaks
+flag_pattern_is_wobbly true if pattern_median_peak_spacing exceeds a treshold
+flag_peak_at_minus_one_pos  true if a peak was detected immediately before the monoisotopic peak, could indicate
+                            overlap with another pattern
+i0 - i19                the intensities of the first 20 peaks of the pattern  
+m0 - m19                the masses of the first 20 peaks of the pattern
+c1 - c6                 contributions of clumps of 1-6 carbon to ratio_na. These are the outcomes of the clumpy carbon
+                        model. These results are only meaningful if the biomass was labeled to saturation.
 
 calisp.py was developed using [PyCharm comunity edition](https://www.jetbrains.com/pycharm/).
 

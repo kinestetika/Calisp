@@ -67,8 +67,9 @@ In the saved dataframe, each row contains one isotopic pattern, defined by the f
 ```
 experiment             filename of the peptide spectrum match (psm) file
 ms_run                 filename of the .mzml file
-bins                   bin/mag ids, separated by commas. Calisp expects the protein ids in the psm file to consist of two parts,
-                       separated by a delimiter (_ by default). The first part is the bin/mag id, the second part the protein id
+bins                   bin/mag ids, separated by commas. Calisp expects the protein ids in the psm 
+                       file to consist of two parts, separated by a delimiter (_ by default). The 
+                       first part is the bin/mag id, the second part the protein id
 proteins               the ids of the proteins associated with the pattern (without the bin id)
 peptide                the aminoacid sequence of the peptide
 peptide_mass           the mass of the peptide
@@ -89,27 +90,36 @@ pattern_precursor_id    id of the ms1 spectrum that was the source of the patter
 pattern_total_intensity total intensity of the pattern
 pattern_peak_count      # of peaks in the pattern
 pattern_median_peak_spacing medium mass difference between a pattern's peaks
-spectrum_mass_irregularity  a measure for the standard deviation in the mass difference between a pattern's peaks
-ratio_na                the estimated isotope ratio inferred from neutron abundance (sip experiments) 
-ratio_fft               the estimated isotope ratio inferred by the fft method (natural isotope abundances)
+spectrum_mass_irregularity  a measure for the standard deviation in the mass difference between a
+                            pattern's peaks
+ratio_na                the estimated isotope ratio inferred from neutron abundance (sip 
+                        experiments) 
+ratio_fft               the estimated isotope ratio inferred by the fft method (natural 
+                        isotope abundances)
 error_fft               the remaining error after fitting the pattern with fft
-error_clumpy            the remaining error after fitting the pattern with the clumpy carbon method
+error_clumpy            the remaining error after fitting the pattern with the clumpy carbon 
+                        method
 flag_peptide_contains_sulfur true if peptide contains sulfur
 flag_peptide_has_modifications true if peptide has no modifications
-flag_peptide_assigned_to_multiple_bins true if peptide is associated with multiple proteins from different bins/mags
+flag_peptide_assigned_to_multiple_bins true if peptide is associated with multiple proteins from 
+                                       different bins/mags
 flag_peptide_assigned_to_multiple_proteins true if peptide is associated with multiple proteins
-flag_peptide_mass_and_elements_undefined true if peptide has unknown mass and elemental composition
-flag_psm_has_low_confidence true if psm was flagged as having low confidence (peptide identity uncertain)
+flag_peptide_mass_and_elements_undefined true if peptide has unknown mass and elemental 
+                                         composition
+flag_psm_has_low_confidence true if psm was flagged as having low confidence (peptide identity 
+                            uncertain)
 flag_psm_is_ambiguous   true if psm could not be assigned with certainty
 flag_pattern_is_contaminated true if multiple patterns have one or more shared peaks
 flag_pattern_is_wobbly true if pattern_median_peak_spacing exceeds a treshold
-flag_peak_at_minus_one_pos  true if a peak was detected immediately before the monoisotopic peak, could indicate
-                            overlap with another pattern
+flag_peak_at_minus_one_pos  true if a peak was detected immediately before the monoisotopic peak,
+                            could indicate overlap with another pattern
 i0 - i19                the intensities of the first 20 peaks of the pattern  
 m0 - m19                the masses of the first 20 peaks of the pattern
-c1 - c6                 contributions of clumps of 1-6 carbon to ratio_na. These are the outcomes of the clumpy carbon
-                        model. These results are only meaningful if the biomass was labeled to saturation.
-
+c1 - c6                 contributions of clumps of 1-6 carbon to ratio_na. These are the 
+                        outcomes of the clumpy carbon
+                        model. These results are only meaningful if the biomass was labeled to 
+                        saturation.
+```
 calisp.py was developed using [PyCharm comunity edition](https://www.jetbrains.com/pycharm/).
 
 **Please cite:**

@@ -13,7 +13,7 @@ from calisp import data_store
 from calisp import element_count_and_mass_utils
 from calisp.peptide_spectrum_match_files import PeptideSpectrumMatchFileReader
 
-VERSION = '3.0.10'
+VERSION = '3.0.11'
 START_TIME = time.monotonic()
 LOG_TOPICS = set()
 MASS_ACCURACY = 1e-5

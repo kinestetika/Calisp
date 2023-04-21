@@ -13,7 +13,7 @@ setuptools.setup(
     author_email='mstrous@ucalgary.ca',
     description='Isotope analysis of proteomics data',
     long_description=long_description,
-    long_description_content_type='text/x-rst',
+    long_description_content_type='text/markdown',
     classifiers=['Development Status :: 4 - Beta',
                  'Environment :: Console',
                  'Natural Language :: English',

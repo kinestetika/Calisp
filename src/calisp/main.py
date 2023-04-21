@@ -389,7 +389,7 @@ def main():
             log(f'Contamination found for {co:.1f}% of subsampled patterns. Wobbly patterns make up {wo:.1f}%.')
             ms_run_results_file = os.path.join(args.output_file,
                                                os.path.splitext(os.path.basename(ms_run_file))[0] + '.feather')
-            log(f'Saving pandas dataframe with {len(pattern_data.index)} analyzed patterns to f{ms_run_results_file} '
+            log(f'Saving pandas dataframe with {len(pattern_data.index)} analyzed patterns to {ms_run_results_file} '
                 f'in feather format...')
             pattern_data.to_feather(ms_run_results_file)
     log(f'Done. Thanks for using calisp!')

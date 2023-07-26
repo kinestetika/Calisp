@@ -130,7 +130,7 @@ estimating a negative content for the target isotope (which is physically imposs
 you can provide a custom isotope matrix with the correct 13C content (or other changes you may wish too make).
 The isotope matrix file should be formatted as follows, with elements on rows and isotopes (+0, +1, +2, ...
 extra neutrons) on columns:
-'''
+```
 0.988943414833479 0.011056585166521 0.0         0.0 0.0    0.0 0.0 # C
 0.996323567       0.003676433       0.0         0.0 0.0    0.0 0.0 # N
 0.997574195       0.00038           0.002045805 0.0 0.0    0.0 0.0 # O
@@ -139,7 +139,7 @@ extra neutrons) on columns:
 # VPDB standard 13C/12C = 0.0111802 in Isodat software
 # see also https://www.webelements.com/sulfur/isotopes.html
 # see also http://iupac.org/publications/pac/pdf/2003/pdf/7506x0683.pdf
-'''
+```
 
 calisp.py was developed using [PyCharm comunity edition](https://www.jetbrains.com/pycharm/).
 

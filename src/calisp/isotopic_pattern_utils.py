@@ -1,5 +1,8 @@
+from pathlib import Path
+
 import numpy as np
 from scipy.optimize import minimize_scalar, OptimizeResult
+
 from calisp import element_count_and_mass_utils
 
 ELEMENT_ROW_INDEX = 0
@@ -8,28 +11,31 @@ ISOTOPE_COLUMN_INDEX = 1
 MASS_SHIFT_VARIATION_TOLERANCE = 1e-5
 NEUTRON_MASS_SHIFT_TOLERANCE = 0.002
 
-ISOTOPE_MATRIX = np.array([
-        [0.988943414833479, 0.011056585166521, 0.0,         0.0, 0.0,    0.0, 0.0], # C
-        [0.996323567,       0.003676433,       0.0,         0.0, 0.0,    0.0, 0.0], # N
-        [0.997574195,       0.00038,           0.002045805, 0.0, 0.0,    0.0, 0.0], # O
-        [0.99988,           0.00012,           0.0,         0.0, 0.0,    0.0, 0.0], # H
-        [0.9493,            0.0076,            0.0429,      0.0, 0.0002, 0.0, 0.0]  # S
-    ], dtype=np.float32)
+DEFAULT_MATRIX_FILE = Path(__file__).parent / 'isotope_matrix.txt'
 
-NATURAL_ABUNDANCES = np.array([
-        [0.988943414833479, 0.011056585166521, 0.0,         0.0, 0.0,    0.0, 0.0], # C
-        [0.996323567,       0.003676433,       0.0,         0.0, 0.0,    0.0, 0.0], # N
-        [0.997574195,       0.00038,           0.002045805, 0.0, 0.0,    0.0, 0.0], # O
-        [0.99988,           0.00012,           0.0,         0.0, 0.0,    0.0, 0.0], # H
-        [0.9493,            0.0076,            0.0429,      0.0, 0.0002, 0.0, 0.0]  # S
-    ], dtype=np.float32)
+def load_isotope_matrix(matrix_file: Path):
+    matrix = np.zeros((5, 7), dtype=np.float32)
+    with open(matrix_file) as matrix_reader:
+        row = 0
+        for line in matrix_reader:
+            if line.startswith('#'):
+                continue
+            if (comment_index := line.find('#')) >= 0:
+                line = line[0:comment_index]
+            line_data = line.split()
+            for column in range(0, min(len(line_data), 6)):
+                matrix[row, column] = float(line_data[column])
+            row += 1
+    return matrix
+
+ISOTOPE_MATRIX = load_isotope_matrix(DEFAULT_MATRIX_FILE)
+NATURAL_ABUNDANCES = load_isotope_matrix(DEFAULT_MATRIX_FILE)
 
 CLUMPY_CARBON_BOUNDS = [0.1, 0.1, 0.05, 0.0375, 0.02, 0.02, 0.02]
 
 # VPDB standard 13C/12C = 0.0111802 in Isodat software
 # https://www.webelements.com/sulfur/isotopes.html
 # see also http://iupac.org/publications/pac/pdf/2003/pdf/7506x0683.pdf
-
 
 def compute_relative_neutron_abundance_of_non_target_isotopes(element_counts, matrix=NATURAL_ABUNDANCES):
     rna_untargeted = np.float32(0)

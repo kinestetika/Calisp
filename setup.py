@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='calisp',
-    version='3.0.11',
+    version='3.0.12',
     packages=setuptools.find_packages(where='src'),
     url='https://github.com/kinestetika/Calisp',
     license='MIT',
@@ -24,6 +24,7 @@ setuptools.setup(
     keywords='proteomics isotope mass-spectrometry 13C',
     project_urls={'Source': 'https://github.com/kinestetika/Calisp'},
     package_dir={'': 'src'},
+    package_data={'': ['isotope_matrix.txt']},
     python_requires='>=3.6',
     install_requires=['numpy', 'scipy', 'pandas', 'tqdm', 'pymzml', 'pyarrow'],
     license_files=('LICENSE.txt',),

@@ -1,6 +1,7 @@
 import argparse
 import os
 from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
 import time
 
 import numpy as np
@@ -13,7 +14,7 @@ from calisp import data_store
 from calisp import element_count_and_mass_utils
 from calisp.peptide_spectrum_match_files import PeptideSpectrumMatchFileReader
 
-VERSION = '3.0.11'
+VERSION = '3.0.12'
 START_TIME = time.monotonic()
 LOG_TOPICS = set()
 MASS_ACCURACY = 1e-5
@@ -52,7 +53,9 @@ def parse_arguments():
     parser.add_argument('--compute_clumps', default=False, action='store_true',
                         help='To compute clumpiness of carbon assimilation. Only use when samples are labeled to'
                              'saturation. Estimation of clumpiness takes much additional time.')
-
+    parser.add_argument('--isotope_abundance_matrix', default=None,
+                        help='To use a custom isotope abundance matrix. This is useful when estimating abundances of '
+                                    ' less abundant, non-C isotopes (e.g. H, O, N, S)')
     args = parser.parse_args()
 
     (isotopic_pattern_utils.ELEMENT_ROW_INDEX, isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX) = \
@@ -61,6 +64,10 @@ def parse_arguments():
          '17O': (2, 1), '18O': (2, 2),
          '2H': (3, 1), '3H': (3, 2),
          '33S': (4, 1), '34S': (4, 2), '36S': (4, 4)}[args.isotope]
+    if args.isotope_abundance_matrix:
+        isotopic_pattern_utils.DEFAULT_MATRIX_FILE = Path(args.isotope_abundance_matrix)
+        isotopic_pattern_utils.ISOTOPE_MATRIX = isotopic_pattern_utils.load_isotope_matrix(Path(args.isotope_abundance_matrix))
+        isotopic_pattern_utils.NATURAL_ABUNDANCES = isotopic_pattern_utils.load_isotope_matrix(Path(args.isotope_abundance_matrix))
 
     log(f'isotope:        {args.isotope} '
         f'[matrix{isotopic_pattern_utils.ELEMENT_ROW_INDEX, isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX}]')
@@ -71,7 +78,11 @@ def parse_arguments():
     log(f'bin_delimiter:  {args.bin_delimiter}')
     log(f'threads:        {args.threads}')
     log(f'compute_clumps: {args.compute_clumps}')
+    log(f'isotope_matrix: {isotopic_pattern_utils.DEFAULT_MATRIX_FILE}')
     args.mass_accuracy /= 1e6
+    global MASS_ACCURACY, COMPUTE_CLUMPS
+    MASS_ACCURACY = args.mass_accuracy
+    COMPUTE_CLUMPS = args.compute_clumps
     return args
 
 
@@ -275,9 +286,6 @@ def submit_for_overlap_detection(task):
 def main():
     log(f'This is calisp.py {VERSION}')
     args = parse_arguments()
-    global MASS_ACCURACY, COMPUTE_CLUMPS
-    MASS_ACCURACY = args.mass_accuracy
-    COMPUTE_CLUMPS = args.compute_clumps
     prep_output_folder(args.output_file)
 
     my_data_store = data_store.DataStore()

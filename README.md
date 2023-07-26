@@ -1,4 +1,4 @@
-## Calisp.py, version 3.0.11
+## Calisp.py, version 3.0.12
 
 Calisp.py (Calgary approach to isotopes in proteomics) is a program that estimates isotopic composition (e.g. 13C/12C,
 delta13C, 15N/14N etc) of peptides from proteomics mass spectrometry data. Input data consist of mzML files and 
@@ -59,7 +59,8 @@ If you would like to explore calisp results in Jupyter notebooks, run the follow
  or folder with .PeptideSpectrumMatch files] --output_file [folder where calisp.py will save results files] --threads [# of 
  threads used, default 4] --isotope [15N, 3H etc, default 13C], --bin_delimiter [character that separates the bin ID from the
  remainder of protein IDs, default '_'], --mass_accuracy [accuracy of peak m/z identifications, default 10 ppm]
- --compute_clumps [use only if you want to compute clumpiness]
+ --compute_clumps [use only if you want to compute clumpiness] --isotope_abundance_matrix [path to file with isotope matrix,
+ a default file is included with calisp]
 
 **Column names of the Pandas DataFrame created by calisp.py:**
 
@@ -120,6 +121,26 @@ c1 - c6                 contributions of clumps of 1-6 carbon to ratio_na. These
                         model. These results are only meaningful if the biomass was labeled to 
                         saturation.
 ```
+**Using a custom isotope abundance matrix:**
+When estimating isotopic content for nitrogen, oxygen, hydrogen and sulfur, the estimates will be strongly
+affected by isotope abundances of carbon. For example, often biomass is slightly depleted in 13C compared to
+the inorganic reference (Vienna Pee Dee Belemnite). However, Calisp will assume the assumed 13C content to be
+correct and will compensate the difference by reducing the content of the target isotope, which may result in
+estimating a negative content for the target isotope (which is physically impossible). To overcome this issue,
+you can provide a custom isotope matrix with the correct 13C content (or other changes you may wish too make).
+The isotope matrix file should be formatted as follows, with elements on rows and isotopes (+0, +1, +2, ...
+extra neutrons) on columns:
+'''
+0.988943414833479 0.011056585166521 0.0         0.0 0.0    0.0 0.0 # C
+0.996323567       0.003676433       0.0         0.0 0.0    0.0 0.0 # N
+0.997574195       0.00038           0.002045805 0.0 0.0    0.0 0.0 # O
+0.99988           0.00012           0.0         0.0 0.0    0.0 0.0 # H
+0.9493            0.0076            0.0429      0.0 0.0002 0.0 0.0 # S
+# VPDB standard 13C/12C = 0.0111802 in Isodat software
+# see also https://www.webelements.com/sulfur/isotopes.html
+# see also http://iupac.org/publications/pac/pdf/2003/pdf/7506x0683.pdf
+'''
+
 calisp.py was developed using [PyCharm comunity edition](https://www.jetbrains.com/pycharm/).
 
 **Please cite:**

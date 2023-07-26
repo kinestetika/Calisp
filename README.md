@@ -141,7 +141,7 @@ extra neutrons) on columns:
 # see also http://iupac.org/publications/pac/pdf/2003/pdf/7506x0683.pdf
 ```
 
-calisp.py was developed using [PyCharm comunity edition](https://www.jetbrains.com/pycharm/).
+calisp.py was developed using [PyCharm community edition](https://www.jetbrains.com/pycharm/).
 
 **Please cite:**
 

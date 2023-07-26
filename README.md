@@ -150,9 +150,9 @@ carbon sources and assimilation pathways of species in microbial communities. Pr
 of Sciences 115 (24), E5576-E5584. 
 doi: [https://doi.org/10.1073/pnas.1722325115 ](https://doi.org/10.1073/pnas.1722325115 )
 
-Kleiner M, Kouris A, Jensen M, Liu Y, McCalder J, Strous M (2021) Ultra-sensitive Protein-SIP to quantify activity 
-and substrate uptake in microbiomes with stable isotopes. bioRxiv.
-doi: [https://doi.org/10.1101/2021.03.29.437612](https://doi.org/10.1101/2021.03.29.437612)
+Kleiner M, Kouris A, Jensen M, Liu Y, McCalder J, Strous M (2023) Ultra-sensitive Protein-SIP to quantify activity
+and substrate uptake in microbiomes with stable isotopes. Microbiome 11, 24.
+doi: [https://doi.org/10.1186/s40168-022-01454-1](https://doi.org/10.1186/s40168-022-01454-1)
 
 M Kösters, J Leufken, S Schulze, K Sugimoto, J Klein, R P Zahedi, M Hippler, S A Leidel, C Fufezan; pymzML v2.0: 
 introducing a highly compressed and seekable gzip format, Bioinformatics, 

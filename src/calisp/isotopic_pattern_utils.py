@@ -11,7 +11,7 @@ ISOTOPE_COLUMN_INDEX = 1
 MASS_SHIFT_VARIATION_TOLERANCE = 1e-5
 NEUTRON_MASS_SHIFT_TOLERANCE = 0.002
 
-DEFAULT_MATRIX_FILE = Path(__file__).parent / 'isotope_matrix.txt'
+CLUMPY_CARBON_BOUNDS = [0.1, 0.1, 0.05, 0.0375, 0.02, 0.02, 0.02]
 
 def load_isotope_matrix(matrix_file: Path):
     matrix = np.zeros((5, 7), dtype=np.float32)
@@ -28,16 +28,12 @@ def load_isotope_matrix(matrix_file: Path):
             row += 1
     return matrix
 
-ISOTOPE_MATRIX = load_isotope_matrix(DEFAULT_MATRIX_FILE)
-NATURAL_ABUNDANCES = load_isotope_matrix(DEFAULT_MATRIX_FILE)
-
-CLUMPY_CARBON_BOUNDS = [0.1, 0.1, 0.05, 0.0375, 0.02, 0.02, 0.02]
 
 # VPDB standard 13C/12C = 0.0111802 in Isodat software
 # https://www.webelements.com/sulfur/isotopes.html
 # see also http://iupac.org/publications/pac/pdf/2003/pdf/7506x0683.pdf
 
-def compute_relative_neutron_abundance_of_non_target_isotopes(element_counts, matrix=NATURAL_ABUNDANCES):
+def compute_relative_neutron_abundance_of_non_target_isotopes(element_counts, matrix: np.ndarray):
     rna_untargeted = np.float32(0)
     for row in range(len(matrix)):
         for column in range(len(matrix[0])):
@@ -47,16 +43,16 @@ def compute_relative_neutron_abundance_of_non_target_isotopes(element_counts, ma
     return rna_untargeted
 
 
-def compute_relative_neutron_abundance(peaks, element_counts):
+def compute_relative_neutron_abundance(peaks, element_counts, matrix: np.ndarray):
     rna = np.sum(peaks * range(len(peaks))) / np.sum(peaks)
-    rna -= compute_relative_neutron_abundance_of_non_target_isotopes(element_counts)
+    rna -= compute_relative_neutron_abundance_of_non_target_isotopes(element_counts, matrix)
     rna /= element_counts[ELEMENT_ROW_INDEX]
     rna /= ISOTOPE_COLUMN_INDEX
     return rna
 
 
-def standard_ratio():
-    return ISOTOPE_MATRIX[ELEMENT_ROW_INDEX][ISOTOPE_COLUMN_INDEX] / ISOTOPE_MATRIX[ELEMENT_ROW_INDEX][0]
+def standard_ratio(matrix):
+    return matrix[ELEMENT_ROW_INDEX][ISOTOPE_COLUMN_INDEX] / matrix[ELEMENT_ROW_INDEX][0]
 
 
 def __fft(element_counts: np.ndarray, matrix: np.ndarray, modeled_peaks: np.ndarray):
@@ -84,7 +80,7 @@ def __fft(element_counts: np.ndarray, matrix: np.ndarray, modeled_peaks: np.ndar
         modeled_peaks[j] = v_x[j].real / total_intensity
 
 
-def __fft_vector_len(peak_count, element_counts: np.ndarray):
+def __fft_vector_len(peak_count, element_counts: np.ndarray, matrix: np.ndarray):
     fft_vector_len = 128
     if peak_count <= 48:
         fft_vector_len = 64
@@ -95,11 +91,11 @@ def __fft_vector_len(peak_count, element_counts: np.ndarray):
     if peak_count <= 4:
         fft_vector_len = 8
     modeled_peaks = np.zeros(fft_vector_len, dtype=np.float32)
-    __fft(element_counts, ISOTOPE_MATRIX, modeled_peaks)
+    __fft(element_counts, matrix, modeled_peaks)
     while modeled_peaks[-1] > 1e-6:
         fft_vector_len *= 2
         modeled_peaks = np.zeros(fft_vector_len, dtype=np.float32)
-        __fft(element_counts, ISOTOPE_MATRIX, modeled_peaks)
+        __fft(element_counts, matrix, modeled_peaks)
         if fft_vector_len >= 256:
             break
     return fft_vector_len
@@ -143,20 +139,21 @@ def distance_ss(peaks_a: np.ndarray, peaks_b: np.ndarray, max_peak_count=9999): 
     return sum_of_squares
 
 
-def fit_relative_neutron_abundance(spectrum: {}, experimental_peaks: np.ndarray, element_counts: np.ndarray):
+def fit_relative_neutron_abundance(spectrum: {}, experimental_peaks: np.ndarray, element_counts: np.ndarray,
+                                   matrix: np.ndarray):
     if not sum(element_counts):
         return {}
-    rna = compute_relative_neutron_abundance(experimental_peaks, element_counts)
+    rna = compute_relative_neutron_abundance(experimental_peaks, element_counts, matrix)
     ratio = rna / (1 - rna)
     spectrum['ratio_na'] = ratio
     return spectrum
 
 
 def fit_fft(pattern: {}, experimental_peaks: np.ndarray, element_counts: np.ndarray,
-            matrix: np.ndarray = ISOTOPE_MATRIX):
+            matrix: np.ndarray):
     if not sum(element_counts):
         return {}
-    fft_vector_size = __fft_vector_len(len(experimental_peaks), element_counts)
+    fft_vector_size = __fft_vector_len(len(experimental_peaks), element_counts, matrix)
     modeled_peaks = np.zeros(fft_vector_size, dtype=np.float32)
     # see https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize_scalar.html
     fit: OptimizeResult = minimize_scalar(__fft_fitting_function, bounds=(0, 0.15), method='Bounded',
@@ -168,10 +165,10 @@ def fit_fft(pattern: {}, experimental_peaks: np.ndarray, element_counts: np.ndar
 
 
 def fit_clumpy_carbon(pattern: {}, experimental_peaks: np.ndarray, element_counts: np.ndarray,
-                      matrix: np.ndarray = ISOTOPE_MATRIX):
+                      matrix: np.ndarray):
     if not sum(element_counts):
         return {}
-    fft_vector_size = __fft_vector_len(len(experimental_peaks), element_counts)
+    fft_vector_size = __fft_vector_len(len(experimental_peaks), element_counts, matrix)
     matrix[ELEMENT_ROW_INDEX] = np.array([1, 0, 0, 0, 0, 0, 0], dtype=np.float32)
     index_len = min(6, len(experimental_peaks)-1)
     modeled_peaks = np.zeros(fft_vector_size, dtype=np.float32)

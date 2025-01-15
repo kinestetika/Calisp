@@ -2,7 +2,6 @@ import argparse
 import os
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-import time
 
 import numpy as np
 import pandas as pd
@@ -12,31 +11,21 @@ from tqdm import tqdm
 from calisp import isotopic_pattern_utils
 from calisp import data_store
 from calisp import element_count_and_mass_utils
+from calisp.log import log, VERSION
 from calisp.peptide_spectrum_match_files import PeptideSpectrumMatchFileReader
 
-VERSION = '3.0.13'
-START_TIME = time.monotonic()
-LOG_TOPICS = set()
 MASS_ACCURACY = 1e-5
 COMPUTE_CLUMPS = False
 DEFAULT_MATRIX_FILE = Path(__file__).parent / 'isotope_matrix.txt'
 ISOTOPE_MATRIX = isotopic_pattern_utils.load_isotope_matrix(DEFAULT_MATRIX_FILE)
 NATURAL_ABUNDANCES = isotopic_pattern_utils.load_isotope_matrix(DEFAULT_MATRIX_FILE)
 
-def format_runtime():
-    runtime = time.monotonic() - START_TIME
-    return f'[{int(runtime / 3600):02d}h:{int((runtime % 3600) / 60):02d}m:{int(runtime % 60):02d}s]'
-
-
-def log(log_message, topic=''):
-    if not topic or topic in LOG_TOPICS:
-        print(f'{format_runtime()} {log_message}')
 
 
 def parse_arguments():
     global DEFAULT_MATRIX_FILE, ISOTOPE_MATRIX, NATURAL_ABUNDANCES
 
-    parser = argparse.ArgumentParser(description='src.py. (C) Marc Strous, Xiaoli Dong and Manuel Kleiner, 2018, 2021')
+    parser = argparse.ArgumentParser(description='Calisp.py. (C) Marc Strous, Xiaoli Dong and Manuel Kleiner, 2018, 2021')
     parser.add_argument('--spectrum_file', required=True,  # type=argparse.FileType('r'),
                         help='[.mzML] file or folder with [.mzML] file(s).')
     parser.add_argument('--peptide_file', required=True,  # type=argparse.FileType('r'),
@@ -254,14 +243,14 @@ def subsample_ms1_spectrum(i, psm_index, task, prev_success, subsampled_patterns
             # assign isotopic pattern to the closest psm
             # bundle subsampled isotopic pattern as a dictionary
             subsampled_pattern = {'psm_index': psm_index,
-                                   'pattern_charge': charge,
-                                   'pattern_total_intensity': total_intensity,
-                                   'pattern_precursor_id': task['ms1_id_list'][i],
-                                   'pattern_peak_count': len(peak_intensities),
-                                   'flag_pattern_is_contaminated': False,
-                                   'flag_pattern_is_wobbly': False,
-                                   'flag_peak_at_minus_one_pos': peak_at_minus_one,
-                                   'reassigned': False}
+                                  'pattern_charge': charge,
+                                  'pattern_total_intensity': total_intensity,
+                                  'pattern_precursor_id': task['ms1_id_list'][i],
+                                  'pattern_peak_count': len(peak_intensities),
+                                  'flag_pattern_is_contaminated': False,
+                                  'flag_pattern_is_wobbly': False,
+                                  'flag_peak_at_minus_one_pos': peak_at_minus_one,
+                                  'reassigned': False}
             for p in range(len(peak_intensities)):
                 subsampled_pattern[f'i{p}'] = peak_intensities[p]
                 subsampled_pattern[f'm{p}'] = peak_moverz[p]
@@ -288,7 +277,7 @@ def submit_for_overlap_detection(task):
 
 
 def main():
-    log(f'This is calisp.py {VERSION}')
+    log(f'This is calisp.py, version {VERSION}')
     args = parse_arguments()
     prep_output_folder(args.output_file)
 
@@ -355,8 +344,8 @@ def main():
                 f'{len(ms1_spectra_list)} MS1 spectra, using {args.threads} threads for isotope analysis, '
                 f'first prepping tasks for parallel execution...')
             # (4) sample the patterns from the ms file. pattern_data is where the final output is stored
-            pattern_data = pd.DataFrame(columns=data_store.DATAFRAME_COLUMNS)
-            pattern_data = pattern_data.astype(data_store.DATAFRAME_DATATYPES)
+            pattern_data = None # pd.DataFrame(columns=data_store.DATAFRAME_COLUMNS)
+            #pattern_data = pattern_data.astype(data_store.DATAFRAME_DATATYPES)
             with ProcessPoolExecutor(max_workers=args.threads) as executor:
                 peptides = psm_data_of_current_ms_run['peptide'].unique()  # analyze peptide by peptide
                 tasks = [{'peptide': peptide,
@@ -377,7 +366,10 @@ def main():
                             patterns_reassigned_count += 1
                         del p['reassigned']
                     all_patterns.extend(patterns)
-            pattern_data = pd.concat([pattern_data, pd.DataFrame(all_patterns)], ignore_index=True)
+            if pattern_data:
+                pattern_data = pd.concat([pattern_data, pd.DataFrame(all_patterns)], ignore_index=True)
+            else:
+                pattern_data = pd.DataFrame(all_patterns)
             # log(f'undefined mass {MASS_UNDEFINED}; no monoisotopic peak {NO_MONOISOTOPIC_PEAK}/{TOTAL_CHARGE_TRIALS}; too few peaks: {TOO_FEW_PEAKS}')
             log(f'Subsampled and analyzed {len(pattern_data.index)} isotopic patterns, ')
             if not len(pattern_data.index):

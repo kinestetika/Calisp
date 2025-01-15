@@ -26,6 +26,11 @@ def load_isotope_matrix(matrix_file: Path):
             for column in range(0, min(len(line_data), 6)):
                 matrix[row, column] = float(line_data[column])
             row += 1
+    # test if matrix is sane:
+    for row in range(5):
+        for column in range(2):
+            if not matrix[row, column]:
+                raise Exception (f"Isotope matrix has zero at row {row}, column {column}.")
     return matrix
 
 

@@ -39,7 +39,7 @@ per .mzML file on a Desktop computer. The user can perform filtering of the isot
 as desired. For natural abundance data, it works well to only use those spectra that have a FFT fitting error 
 ("error_fft") of less than 0.001. Note that this threshold is less stringent th8en thew one used by the java program.
 
-##Installation:
+## Installation
 
 >python -m virtualenv calisp
 
@@ -51,7 +51,7 @@ If you would like to explore calisp results in Jupyter notebooks, run the follow
 
 >pip install --upgrade calisp jupyter matplotlib jinja2
 
-##Usage:##
+## Usage
 
 >source calisp/bin/activate
 
@@ -62,7 +62,7 @@ If you would like to explore calisp results in Jupyter notebooks, run the follow
  --compute_clumps [use only if you want to compute clumpiness] --isotope_abundance_matrix [path to file with isotope matrix,
  a default file is included with calisp]
 
-**Column names of the Pandas DataFrame created by calisp.py:**
+## Column names of the Pandas DataFrame created by calisp.py:
 
 In the saved dataframe, each row contains one isotopic pattern, defined by the following columns:
 ```
@@ -121,7 +121,7 @@ c1 - c6                 contributions of clumps of 1-6 carbon to ratio_na. These
                         model. These results are only meaningful if the biomass was labeled to 
                         saturation.
 ```
-##Using a custom isotope abundance matrix:
+## Using a custom isotope abundance matrix
 
 When estimating isotopic content for nitrogen, oxygen, hydrogen and sulfur, the estimates will be strongly
 affected by isotope abundances of carbon. For example, often biomass is slightly depleted in 13C compared to
@@ -141,7 +141,7 @@ you may wish to make). The isotope matrix file should be formatted as follows, w
 # see also https://www.webelements.com/sulfur/isotopes.html
 # see also http://iupac.org/publications/pac/pdf/2003/pdf/7506x0683.pdf
 ```
-##calisp_filter_patterns.py
+## calisp_filter_patterns.py
 
 Use this script after running calisp.py to filter the detected patterns and to convert your data from binary .feather
 format to .csv.
@@ -172,7 +172,7 @@ Arguments:
 
 Calisp was developed using [PyCharm community edition](https://www.jetbrains.com/pycharm/).
 
-##Please cite:
+## Please cite
 
 Kleiner M, Dong X, Hinzke T, Wippler J, Thorson E, Mayer B, Strous M (2018) A metaproteomics method to determine 
 carbon sources and assimilation pathways of species in microbial communities. Proceedings of the National Academy 

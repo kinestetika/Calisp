@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import pandas as pd
+from pandas.core.interchange.dataframe_protocol import DataFrame
 
 from calisp.log import log, VERSION
 
@@ -61,55 +62,58 @@ def parse_arguments():
         log(f'  {f["in"].parent.name}/{f["in"].name} => {f["out"].parent.name}/{f["out"].name}')
 
 
+def filter_calisp_data(data:DataFrame, flags:list, fft_max_error:float, crap:bool):
+    initial_pattern_count = len(data.index)
+    if 'flag_peptide_mass_and_elements_undefined' in flags:
+        data = data[data.flag_peptide_mass_and_elements_undefined != True]
+        log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding "flag_peptide_mass_and_elements_undefined"...')
+    if 'flag_peptide_assigned_to_multiple_bins' in flags:
+        data = data[data.flag_peptide_assigned_to_multiple_bins != True]
+        log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding "flag_peptide_assigned_to_multiple_bins"...')
+    if 'flag_peptide_assigned_to_multiple_proteins' in flags:
+        data = data[data.flag_peptide_assigned_to_multiple_proteins != True]
+        log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding "flag_peptide_assigned_to_multiple_proteins"...')
+    if 'flag_psm_has_low_confidence' in flags:
+        data = data[data.flag_psm_has_low_confidence != True]
+        log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding "flag_psm_has_low_confidence"...')
+    if 'flag_psm_is_ambiguous' in flags:
+        data = data[data.flag_psm_is_ambiguous != True]
+        log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding "flag_psm_is_ambiguous"...')
+    if 'flag_pattern_is_contaminated' in flags:
+        data = data[data.flag_pattern_is_contaminated != True]
+        log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding "flag_pattern_is_contaminated"...')
+    if 'flag_pattern_is_wobbly' in flags:
+        data = data[data.flag_pattern_is_wobbly != True]
+        log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding "flag_pattern_is_wobbly"...')
+    if 'flag_peak_at_minus_one_pos' in flags:
+        data = data[data.flag_peak_at_minus_one_pos != True]
+        log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding "flag_peak_at_minus_one_pos"...')
+    if 'flag_peptide_contains_sulfur' in flags:
+        data = data[data.flag_peptide_contains_sulfur != True]
+        log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding "flag_peptide_contains_sulfur"...')
+    if 'flag_peptide_has_modifications' in flags:
+        data = data[data.flag_peptide_has_modifications != True]
+        log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding "flag_peptide_has_modifications"...')
+    if crap:
+        data = data[~data.proteins.str.contains('^CRAP')]
+        log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding protein names containing "^CRAP"...')
+    if fft_max_error > 0:
+        data = data[data.error_fft < fft_max_error]
+        log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding patterns with a FFT fit worse than {fft_max_error}...')
+    return data
+
+
 def main():
     log(f'This is calisp_filter_patterns.py, version {VERSION}')
     args = parse_arguments()
     for f in FILES:
         data = pd.read_feather(f['in'])
         log(f'{f["in"].name}: Loaded {len(data.index)} patterns.')
-        initial_pattern_count = len(data.index)
-        if 'flag_peptide_mass_and_elements_undefined' in FLAGS:
-            data = data[data.flag_peptide_mass_and_elements_undefined != True]
-            log(f'{len(data.index)} ({len(data.index)/initial_pattern_count:.1%}) remaining after excluding "flag_peptide_mass_and_elements_undefined"...')
-        if 'flag_peptide_assigned_to_multiple_bins' in FLAGS:
-            data = data[data.flag_peptide_assigned_to_multiple_bins != True]
-            log(f'{len(data.index)} ({len(data.index)/initial_pattern_count:.1%}) remaining after excluding "flag_peptide_assigned_to_multiple_bins"...')
-        if 'flag_peptide_assigned_to_multiple_proteins' in FLAGS:
-            data = data[data.flag_peptide_assigned_to_multiple_proteins != True]
-            log(f'{len(data.index)} ({len(data.index)/initial_pattern_count:.1%}) remaining after excluding "flag_peptide_assigned_to_multiple_proteins"...')
-        if 'flag_psm_has_low_confidence' in FLAGS:
-            data = data[data.flag_psm_has_low_confidence != True]
-            log(f'{len(data.index)} ({len(data.index)/initial_pattern_count:.1%}) remaining after excluding "flag_psm_has_low_confidence"...')
-        if 'flag_psm_is_ambiguous' in FLAGS:
-            data = data[data.flag_psm_is_ambiguous != True]
-            log(f'{len(data.index)} ({len(data.index)/initial_pattern_count:.1%}) remaining after excluding "flag_psm_is_ambiguous"...')
-        if 'flag_pattern_is_contaminated' in FLAGS:
-            data = data[data.flag_pattern_is_contaminated != True]
-            log(f'{len(data.index)} ({len(data.index)/initial_pattern_count:.1%}) remaining after excluding "flag_pattern_is_contaminated"...')
-        if 'flag_pattern_is_wobbly' in FLAGS:
-            data = data[data.flag_pattern_is_wobbly != True]
-            log(f'{len(data.index)} ({len(data.index)/initial_pattern_count:.1%}) remaining after excluding "flag_pattern_is_wobbly"...')
-        if 'flag_peak_at_minus_one_pos' in FLAGS:
-            data = data[data.flag_peak_at_minus_one_pos != True]
-            log(f'{len(data.index)} ({len(data.index)/initial_pattern_count:.1%}) remaining after excluding "flag_peak_at_minus_one_pos"...')
-        if 'flag_peptide_contains_sulfur'in FLAGS:
-            data = data[data.flag_peptide_contains_sulfur != True]
-            log(f'{len(data.index)} ({len(data.index)/initial_pattern_count:.1%}) remaining after excluding "flag_peptide_contains_sulfur"...')
-        if 'flag_peptide_has_modifications' in FLAGS:
-            data = data[data.flag_peptide_has_modifications != True]
-            log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding "flag_peptide_has_modifications"...')
-        if CRAP:
-            data = data[~data.proteins.str.contains('^CRAP')]
-            log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding protein names containing "^CRAP"...')
-
-        if FFT_MAX_ERROR > 0:
-            data = data[data.error_fft < FFT_MAX_ERROR]
-            log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding patterns with a FFT fit worse than {FFT_MAX_ERROR}...')
-
+        data = filter_calisp_data(data, flags=FLAGS, fft_max_error=FFT_MAX_ERROR, crap=CRAP)
         log(f'Writing filtered patterns to {f["out"]}...')
         log('=========')
         data.to_csv(f['out'])
-        log('Thanks for using calisp_filter_patterns.py, version {VERSION}')
+        log(f'Thank you for using calisp_filter_patterns.py, version {VERSION}')
 
 if __name__ == "__main__":
     main()

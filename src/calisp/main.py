@@ -16,15 +16,10 @@ from calisp.peptide_spectrum_match_files import PeptideSpectrumMatchFileReader
 
 MASS_ACCURACY = 1e-5
 COMPUTE_CLUMPS = False
-DEFAULT_MATRIX_FILE = Path(__file__).parent / 'isotope_matrix.txt'
-ISOTOPE_MATRIX = isotopic_pattern_utils.load_isotope_matrix(DEFAULT_MATRIX_FILE)
-NATURAL_ABUNDANCES = isotopic_pattern_utils.load_isotope_matrix(DEFAULT_MATRIX_FILE)
-
 
 
 def parse_arguments():
-    global DEFAULT_MATRIX_FILE, ISOTOPE_MATRIX, NATURAL_ABUNDANCES
-
+    global MASS_ACCURACY, COMPUTE_CLUMPS
     parser = argparse.ArgumentParser(description='Calisp.py. (C) Marc Strous, Xiaoli Dong and Manuel Kleiner, 2018, 2021')
     parser.add_argument('--spectrum_file', required=True,  # type=argparse.FileType('r'),
                         help='[.mzML] file or folder with [.mzML] file(s).')
@@ -58,9 +53,9 @@ def parse_arguments():
          '2H': (3, 1), '3H': (3, 2),
          '33S': (4, 1), '34S': (4, 2), '36S': (4, 4)}[args.isotope]
     if args.isotope_abundance_matrix:
-        DEFAULT_MATRIX_FILE = Path(args.isotope_abundance_matrix)
-        ISOTOPE_MATRIX = isotopic_pattern_utils.load_isotope_matrix(DEFAULT_MATRIX_FILE)
-        NATURAL_ABUNDANCES = isotopic_pattern_utils.load_isotope_matrix(DEFAULT_MATRIX_FILE)
+        isotopic_pattern_utils.DEFAULT_MATRIX_FILE = Path(args.isotope_abundance_matrix)
+    isotopic_pattern_utils.ISOTOPE_MATRIX = isotopic_pattern_utils.load_isotope_matrix(None)
+    isotopic_pattern_utils.NATURAL_ABUNDANCES = isotopic_pattern_utils.load_isotope_matrix(None)
 
     log(f'isotope:        {args.isotope} '
         f'[matrix{isotopic_pattern_utils.ELEMENT_ROW_INDEX, isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX}]')
@@ -71,9 +66,8 @@ def parse_arguments():
     log(f'bin_delimiter:  {args.bin_delimiter}')
     log(f'threads:        {args.threads}')
     log(f'compute_clumps: {args.compute_clumps}')
-    log(f'isotope_matrix: {DEFAULT_MATRIX_FILE}')
+    log(f'isotope_matrix: {isotopic_pattern_utils.DEFAULT_MATRIX_FILE}')
     args.mass_accuracy /= 1e6
-    global MASS_ACCURACY, COMPUTE_CLUMPS
     MASS_ACCURACY = args.mass_accuracy
     COMPUTE_CLUMPS = args.compute_clumps
     return args
@@ -175,10 +169,10 @@ def subsample_ms1_spectra(task):
         for i in range(p['pattern_peak_count']):
             intensities[i] = p[f'i{i}']
             masses[i] = p[f'm{i}']
-        isotopic_pattern_utils.fit_relative_neutron_abundance(p, intensities, element_counts, NATURAL_ABUNDANCES)
-        isotopic_pattern_utils.fit_fft(p, intensities, element_counts, ISOTOPE_MATRIX)
+        isotopic_pattern_utils.fit_relative_neutron_abundance(p, intensities, element_counts, isotopic_pattern_utils.NATURAL_ABUNDANCES)
+        isotopic_pattern_utils.fit_fft(p, intensities, element_counts, isotopic_pattern_utils.ISOTOPE_MATRIX)
         if COMPUTE_CLUMPS:
-            isotopic_pattern_utils.fit_clumpy_carbon(p, intensities, element_counts, ISOTOPE_MATRIX)
+            isotopic_pattern_utils.fit_clumpy_carbon(p, intensities, element_counts, isotopic_pattern_utils.ISOTOPE_MATRIX)
         isotopic_pattern_utils.compute_spacing_and_irregularity(p, masses, p['pattern_charge'])
     return subsampled_patterns
 

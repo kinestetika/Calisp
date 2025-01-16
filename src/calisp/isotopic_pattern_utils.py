@@ -13,7 +13,14 @@ NEUTRON_MASS_SHIFT_TOLERANCE = 0.002
 
 CLUMPY_CARBON_BOUNDS = [0.1, 0.1, 0.05, 0.0375, 0.02, 0.02, 0.02]
 
-def load_isotope_matrix(matrix_file: Path):
+DEFAULT_MATRIX_FILE = Path(__file__).parent / 'isotope_matrix.txt'
+ISOTOPE_MATRIX = None #isotopic_pattern_utils.load_isotope_matrix(DEFAULT_MATRIX_FILE)
+NATURAL_ABUNDANCES = None #isotopic_pattern_utils.load_isotope_matrix(DEFAULT_MATRIX_FILE)
+
+
+def load_isotope_matrix(matrix_file):
+    if not matrix_file:
+        matrix_file = DEFAULT_MATRIX_FILE
     matrix = np.zeros((5, 7), dtype=np.float32)
     with open(matrix_file) as matrix_reader:
         row = 0

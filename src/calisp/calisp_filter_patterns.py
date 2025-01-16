@@ -6,11 +6,13 @@ from pandas.core.interchange.dataframe_protocol import DataFrame
 
 from calisp.log import log, VERSION
 
+
 FILES = []
 FFT_MAX_ERROR = 0.001
 CRAP = False
-FLAGS = ('flag_psm_has_low_confidence flag_psm_is_ambiguous flag_pattern_is_contaminated flag_pattern_is_wobbly '
-         'flag_peptide_assigned_to_multiple_proteins flag_peptide_assigned_to_multiple_bins flag_peptide_mass_and_elements_undefined').split()
+FLAGS = set(('flag_psm_has_low_confidence flag_psm_is_ambiguous flag_pattern_is_contaminated flag_pattern_is_wobbly '
+         'flag_peptide_assigned_to_multiple_proteins flag_peptide_assigned_to_multiple_bins flag_peptide_mass_and_elements_undefined').split())
+
 
 def parse_arguments():
     global FFT_MAX_ERROR, FLAGS, FILES, CRAP
@@ -20,14 +22,14 @@ def parse_arguments():
     parser.add_argument('--SIF', default=False, action='store_true', help='SIF (fingerprinting, natural abundances).')
     parser.add_argument('--SIP', default=False, action='store_true', help='SIP (probing, isotopes were added to the experiment).')
     parser.add_argument('--CRAP', default=False, action='store_true', help='Remove patterns of proteins of the CRAP database.')
+    parser.add_argument('--protein', default=False, action='store_true', help='Use this if you plan to analyze data for individual proteins.')
     parser.add_argument('--flags', help='For expert use only: comma separated list of flags. Patterns that have one or more of '
                                                      'these flags will be filtered out.')
     parser.add_argument('--max_fft_error', help='For expert use only: Only keep patterns that fit the model better '
                                                              'than this value.')
-
     args = parser.parse_args()
     if args.SIF:
-        FLAGS = 'flag_peptide_assigned_to_multiple_bins flag_peptide_mass_and_elements_undefined flag_pattern_is_contaminated'.split()
+        FLAGS = set('flag_peptide_assigned_to_multiple_bins flag_peptide_mass_and_elements_undefined flag_pattern_is_contaminated'.split())
         log('Filters set for stable isotope fingerprinting:')
         log(f'  FFT maximum error = {FFT_MAX_ERROR}')
         log(f'  Flags: {", ".join(FLAGS)}')
@@ -37,15 +39,18 @@ def parse_arguments():
         log(f'  FFT maximum error = (not used)')
         log(f'  Flags: {", ".join(FLAGS)}')
     else:
-        raise Exception('Need to specify --SIP or --SIF.')
+        log('Need to specify --SIP or --SIF.')
+        exit(1)
     if args.CRAP:
         CRAP = True
     if args.max_fft_error:
         FFT_MAX_ERROR = float(args.max_fft_error)
         log(f'  (Expert override of default) FFT maximum error = {FFT_MAX_ERROR}')
     if args.flags:
-        FLAGS = args.flags.split(',')
+        FLAGS = set(args.flags.split(','))
         log(f'  (Expert override of default) Flags: {", ".join(FLAGS)}')
+    if args.protein:
+        FLAGS.add('flag_peptide_assigned_to_multiple_proteins')
     input_file = Path(args.result_file)
     if not input_file.exists():
         raise Exception(f'Input file {input_file} not found.')
@@ -62,7 +67,7 @@ def parse_arguments():
         log(f'  {f["in"].parent.name}/{f["in"].name} => {f["out"].parent.name}/{f["out"].name}')
 
 
-def filter_calisp_data(data:DataFrame, flags:list, fft_max_error:float, crap:bool):
+def filter_calisp_data(data, flags:set, fft_max_error:float, crap:bool):
     initial_pattern_count = len(data.index)
     if 'flag_peptide_mass_and_elements_undefined' in flags:
         data = data[data.flag_peptide_mass_and_elements_undefined != True]
@@ -100,6 +105,7 @@ def filter_calisp_data(data:DataFrame, flags:list, fft_max_error:float, crap:boo
     if fft_max_error > 0:
         data = data[data.error_fft < fft_max_error]
         log(f'{len(data.index)} ({len(data.index) / initial_pattern_count:.1%}) remaining after excluding patterns with a FFT fit worse than {fft_max_error}...')
+    data = data.reset_index()
     return data
 
 

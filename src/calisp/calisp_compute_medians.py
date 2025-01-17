@@ -102,6 +102,11 @@ def apply_vocabulary(data, vocabulary):
         data.loc[affected_data, entry["target_key"]] = entry["target_value"]
     return data
 
+def count_unique_proteins(data):
+    proteins = list(data['proteins'].unique())
+    proteins = set(' '.join(proteins).split())
+    return len(proteins)
+
 
 def compute_medians(data, delta):
     if delta:
@@ -125,10 +130,16 @@ def compute_medians(data, delta):
                 ms_run_stats = {'bin': bin,
                                 'experiment': experiment,
                                 'ms_run': ms_run,
+                                'summed intensity': ms_run_data['pattern_total_intensity'].sum(),
+                                '# unique proteins': count_unique_proteins(ms_run_data),
+                                '# unique peptides': len(ms_run_data['peptide'].unique()),
+                                '# PSMs': len(ms_run_data['psm_id'].unique()),
+                                '# patterns': len(ms_run_data.index),
                                 '#spectra': len(ms_run_data.index),
                                 target_column_name: ms_run_data[target_column].median(),
                                 'lower_quantile': ms_run_data[target_column].quantile(0.25),
-                                'upper_quantile': ms_run_data[target_column].quantile(0.75)}
+                                'upper_quantile': ms_run_data[target_column].quantile(0.75),
+                                'mean_psm_neutron_count': float(ms_run_data['psm_neutrons'].sum()) / len(ms_run_data.index)}
                 if summary_stats:
                     summary_stats = pd.concat([summary_stats, pd.DataFrame(ms_run_stats)], ignore_index=True)
                 else:

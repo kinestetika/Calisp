@@ -22,6 +22,8 @@ def load_isotope_matrix(matrix_file):
     if not matrix_file:
         matrix_file = DEFAULT_MATRIX_FILE
     matrix = np.zeros((5, 7), dtype=np.float32)
+    if not matrix_file.exists():
+        raise Exception(f'Isotope matrix file {matrix_file} not found!')
     with open(matrix_file) as matrix_reader:
         row = 0
         for line in matrix_reader:

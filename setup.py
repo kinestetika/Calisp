@@ -35,7 +35,8 @@ setuptools.setup(
     entry_points={  # Optional
         'console_scripts': [
             'calisp=calisp.main:main',
-            'calisp_filter_patterns=calisp_filter_patterns.main:main'
+            'calisp_filter_patterns=calisp.calisp_filter_patterns:main',
+            'calisp_compute_medians=calisp.calisp_compute_medians:main',
         ],
     }
 )

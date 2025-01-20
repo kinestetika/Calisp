@@ -14,6 +14,7 @@ TARGET_ISOTOPE = 'C13'
 BASE_ISOTOPE = 'C12'
 FOR_EACH_PROTEIN = False
 
+
 def parse_arguments():
     global FILES, VOCABULARY, DELTA, RESULT_FILE, TARGET_ISOTOPE, BASE_ISOTOPE, FOR_EACH_PROTEIN
     parser = ArgumentParser(description='calisp_compute_medians.py. (C) Marc Strous, 2025')
@@ -71,12 +72,17 @@ def parse_arguments():
             raise Exception(f'Input file {input_file} not found.')
         with open(vocabulary_file) as reader:
             for line in reader:
+                line = line.strip()
+                if not len(line):
+                    continue
+                if line.startswith('#'):
+                    continue
                 try:
                     words = line.split('\t')
-                    words = {'src_key': words[0],
-                             'src_value': words[1],
-                             'target_key': words[2],
-                             'target_value': words[3]}
+                    words = {'src_key': words[0].strip(),
+                             'src_value': words[1].strip(),
+                             'target_key': words[2].strip(),
+                             'target_value': words[3].strip()}
                     VOCABULARY.append(words)
                 except:
                     log('The vocabulary file should contain four names per row, separated by a tab.')
@@ -101,6 +107,14 @@ def apply_vocabulary(data, vocabulary):
     for entry in vocabulary:
         affected_data = data[entry["src_key"]] == entry["src_value"]
         data.loc[affected_data, entry["target_key"]] = entry["target_value"]
+        # we need to deal with the problem that a pattern is sometimes associated with multiple bins or proteins
+        # in that case, src_value will not be matched, so here we replace those bin or protein names within source values:
+        # then, we need to deal with the possibility that the same protein or bin is now mentioned twice
+        def remove_duplicates(value: str):
+            return ' '.join(set(value.split()))
+        if entry["src_key"] == entry["target_key"]:
+            data[entry["src_key"]] = data[entry["src_key"]].str.replace(entry["src_value"], entry["target_value"])
+            data[entry["src_key"]] = data[entry["src_key"]].apply(remove_duplicates)
     return data
 
 
@@ -111,6 +125,7 @@ def count_unique_proteins(data):
 
 
 def get_topic_stats(for_each_protein, topic, experiment, ms_run, target_column, target_column_name, data):
+    # here we create one line of the summary stats, aggregating all the measurements for one protein, or for one bin
     if for_each_protein:
         return {'protein(s)': topic,
                 'bins(s)': ' '.join(set(' '.join(data.bins.unique()).split())),
@@ -142,6 +157,7 @@ def get_topic_stats(for_each_protein, topic, experiment, ms_run, target_column, 
 
 
 def aggregate_stats_for_topic(for_each_protein, topic, target_column, target_column_name, all_stats, new_data):
+    # here we iterate over the experiments and ms_runs, creating one stat for each ms_run file
     for experiment in new_data.experiment.unique():
         experiment_data = new_data[new_data.experiment == experiment]
         for ms_run in experiment_data.ms_run.unique():
@@ -155,17 +171,22 @@ def aggregate_stats_for_topic(for_each_protein, topic, target_column, target_col
     return all_stats
 
 
-def compute_medians(data, delta, for_each_protein):
+def compute_medians(data, delta, for_each_protein, target_isotope, base_isotope):
+    # Here we first make sure we output the stats in the right format (delta or ratio) for SIF and SIP respectively.
+    # Note that isotopic_pattern_utils.ELEMENT_ROW_INDEX and isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX as well as
+    # isotopic_pattern_utils.ISOTOPE_MATRIX have been set by parse_arguments() previously. These are all necessary
+    # to compute delta value correctly. Only needed for SIF.
+    # Then we iterate over all bins (or proteins) to calculate a median value for each experiment/ms_run file.
     if delta:
         target_column = "ratio_fft"
-        target_column_name = f"median delta{TARGET_ISOTOPE} (per mille)"
+        target_column_name = f"median delta{target_isotope} (per mille)"
         #data["ratio_fft"] = (data["ratio_fft"] / (0.011056585166521 / 0.988943414833479) - 1) * 1000
         data["ratio_fft"] = (data["ratio_fft"] / (isotopic_pattern_utils.ISOTOPE_MATRIX[isotopic_pattern_utils.ELEMENT_ROW_INDEX]
                                                                                        [isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX] /
                                                   isotopic_pattern_utils.ISOTOPE_MATRIX[isotopic_pattern_utils.ELEMENT_ROW_INDEX][0]) - 1) * 1000
     else:
         target_column = "ratio_na"
-        target_column_name = f"median ratio {TARGET_ISOTOPE}/{BASE_ISOTOPE} (-)"
+        target_column_name = f"median ratio {target_isotope}/{base_isotope} (-)"
 
     all_stats = None
     if for_each_protein:

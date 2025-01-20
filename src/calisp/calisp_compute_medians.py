@@ -37,11 +37,17 @@ def parse_arguments():
         raise Exception(f'Input file {input_file} not found.')
     if input_file.is_file():
         FILES.append(input_file)
-        RESULT_FILE = Path(input_file.parent, input_file.stem + '.stats.csv')
+        if args.protein:
+            RESULT_FILE = Path(input_file.parent, input_file.stem + '.proteins.stats.csv')
+        else:
+            RESULT_FILE = Path(input_file.parent, input_file.stem + '.bins.stats.csv')
     elif input_file.is_dir():
         for f in input_file.glob('*.filtered.csv'):
             FILES.append(f)
-        RESULT_FILE = Path(input_file, 'stats.csv')
+        if args.protein:
+            RESULT_FILE = Path(input_file, 'proteins.stats.csv')
+        else:
+            RESULT_FILE = Path(input_file, 'bins.stats.csv')
     log('Files: ')
     for f in FILES:
         log(f'  {f}')

@@ -8,36 +8,40 @@ Calisp was originally developed in Java. This newer, python version is much more
 files, ~1,000 lines of code, compared to about fifty files and ~10,000 lines of code for the Java program. In addition,
 the Java program depends on another program, mcl, whereas calisp.py is purely python, which is easy to install, see below.
 The conciseness of the code makes the python version more transparent, easier to maintain and easier to further develop. 
-I consider calisp.py is the successor of the Java version. One of the reasons to shift to python is the possibility 
+I consider calisp.py the successor of the Java version. One of the reasons to shift to python is the possibility
 to more effectively develop machine learning approaches to filter out noisy isotopic patterns. Future work will explore
 that possibility.
 
 Benchmarking of Calisp.py has been completed. It works well, benchmarking procedures and outcomes are shared in the 
-"benchmarking" folder. Parsing of .mzid files still needs to be implemented.
+"benchmarking" folder. Parsing of .mzid files still needs to be implemented but Thermo's spectrum protein match file format
+ is supported.
 
 Calisp.py depends on numpy, scipy, pandas, tqdm, [pymzml](https://pymzml.readthedocs.io/en/latest/intro.html), pyarrow. 
 These will be installed automatically by the pip command below. 
 Calisp outputs the data as a Pandas DataFrame saved in (binary) [feather](https://arrow.apache.org/docs/python/feather.html) format.
 Each row contains a single isotopic pattern, with column definitions listed below.
-From there, the user can for example explore and visualize the results in a [Jupyter notebook](https://jupyter.org/). For that, a
-tutorial wil be provided. In the meantime, you can check out the two notebooks I created for benchmarking calisp.py,
-which are in the benchmarking folder.
+Calisp version 3.1 provides two small utility scripts to further process those data:
 
-Compared to previous versions of calisp, the workflow has been simplified. Calisp.py does not filter out any isotopic 
+calisp_filter_patterns      filters out noisy patterns and converts the .feather file to a .csv file
+calisp_compute_medians      reads the .csv file and outputs summary statistics for each protein or bin
+
+See below for more details on these scripts. It is possible that you need more data wrangling than provided by the scripts.
+In that case, you can for example explore and visualize the results in a [Jupyter notebook](https://jupyter.org/). To get
+started you can explore the code of the two scripts as well as the two benchmarking notebooks, which are in the benchmarking folder.
+
+Compared to previous versions of calisp, the workflow has been simplified. Calisp.py itself does not filter out any isotopic
 patterns, or adds up isotopic patterns to reduce noise - like the Java version does. It simply estimates the ratio for 
 the target isotopes (e.g. 13C/12C) for every isotopic pattern it can subsample. It estimates this ratio based on neutron 
 abundance and using fast fourier transforms. The former applies to stable isotope probing experiments. The latter applies 
 to natural abundances, or to isotope probing experiments with very little added label (e.g. using substrates with <1% 
-additional 13C). The motivation for omitting filtering is that keeping all subsampled isotopic patterns, including bad 
-ones, will enable training of machine learning classifiers. Also, because it was shown that the median provides better 
-estimates for species in microbial communities than the mean, adding up isotopic patterns to improve precision has lost 
-its purpose. There is more power (and sensitivity) in numbers.
+additional 13C). The motivation for omitting filtering from the main calisp program is that keeping all subsampled isotopic
+patterns, including bad ones, will enable training of machine learning classifiers. Also, because it was shown that the
+median provides better estimates for species in microbial communities than the mean, adding up isotopic patterns to improve
+precision has lost its purpose. There is more power (and sensitivity) in numbers.
 
 Because no data are filtered out and no isotopic patterns get added up, calisp.py, analyzes at least ten times as many 
 isotopic patterns compared to the Java version. That means calisp.py is about ten times slower, it takes about 5-10 min 
-per .mzML file on a Desktop computer. The user can perform filtering of the isotopic patterns using the Jupyter notebook 
-as desired. For natural abundance data, it works well to only use those spectra that have a FFT fitting error 
-("error_fft") of less than 0.001. Note that this threshold is less stringent th8en thew one used by the java program.
+per .mzML file on a Desktop computer.
 
 ## Installation
 
@@ -55,12 +59,20 @@ If you would like to explore calisp results in Jupyter notebooks, run the follow
 
 >source calisp/bin/activate
 
->calisp.py --spectrum_file [path to .mzML file or folder with .mzML files] --peptide_file [path to .peptideSpectrumMatch file 
- or folder with .PeptideSpectrumMatch files] --output_file [folder where calisp.py will save results files] --threads [# of 
- threads used, default 4] --isotope [15N, 3H etc, default 13C], --bin_delimiter [character that separates the bin ID from the
- remainder of protein IDs, default '_'], --mass_accuracy [accuracy of peak m/z identifications, default 10 ppm]
- --compute_clumps [use only if you want to compute clumpiness] --isotope_abundance_matrix [path to file with isotope matrix,
- a default file is included with calisp]
+>calisp.py --spectrum_file X --peptide_file Y --output_file Z
+
+ List of all possible arguments:
+ ```
+    --spectrum_file             path to .mzML file or dir with .mzML files
+    --peptide_file              path to .peptideSpectrumMatch file or dir with .PeptideSpectrumMatch files
+    --output_file               dir where calisp.py will save results files
+    --threads                   # of threads used, default 4
+    --isotope                   13C, 14C, 15N, 17O, 18O, 2H, 3H, 33S, 34S or 36S, default 13C
+    --bin_delimiter             character that separates the bin ID from the remainder of protein IDs, default '_'
+    --mass_accuracy             accuracy of peak m/z identifications, default 10 ppm
+    --isotope_abundance_matrix  path to file with isotope matrix, a default file is included with calisp
+    --compute_clumps            use only if you want to compute clumpiness
+ ```
 
 ## Column names of the Pandas DataFrame created by calisp.py:
 
@@ -141,12 +153,12 @@ you may wish to make). The isotope matrix file should be formatted as follows, w
 # see also https://www.webelements.com/sulfur/isotopes.html
 # see also http://iupac.org/publications/pac/pdf/2003/pdf/7506x0683.pdf
 ```
-## calisp_filter_patterns.py
+## calisp_filter_patterns
 
-Use this script after running calisp.py to filter the detected patterns and to convert your data from binary .feather
-format to .csv.
+Use this script after running calisp to filter the detected patterns and to convert your data from binary .feather
+format to a .csv file that can be imported into a spreadsheet program.
 
-Example usage: calisp_filter_patterns.py --result_file [calisp result file or dir] --SIF
+Example usage: calisp_filter_patterns --SIF --result_file [calisp result file or dir]
 
 You need to specify --SIP or --SIF.
 
@@ -155,7 +167,9 @@ Arguments:
     --result_file       The .feather file generated by calisp, or a dir containing multiple .feather files.
     --SIF               Apply benchmarked filters for stable isotope fingerprinting data.
     --SIP               Apply benchmarked filters for stable isotope probing data.
-    --CRAP              Remove proteins of the CRAP database.
+    --CRAP              Remove proteins in the CRAP database.
+    --PROTEIN           If you plan to do a per-protein analysis, you may want to filter out patterns assigned to
+                        more than one protein
     --flags             (Expert use:) Specify a custom list of flags for filtering patterns. Options are:
                             flag_psm_has_low_confidence*
                             flag_psm_is_ambiguous*
@@ -171,9 +185,84 @@ Arguments:
                         for SIF data. The benchmarked default when using --SIF is 0.001.
 ```
 
-Calisp was developed using [PyCharm community edition](https://www.jetbrains.com/pycharm/).
+## calisp_compute_medians
+
+Use this script after running calisp_filter_patterns to compute medians and oter statistics. These will be written to
+a stats.csv file that can be imported into a spreadsheet program.
+
+Example usage: calisp_compute_medians --SIF --result_file [.filtered.csv file or dir with .filtered.csv files]
+
+You need to specify --SIP or --SIF.
+
+Arguments:
+```
+    --result_file               The .filtered.csv file generated by calisp_filter_patterns, or a dir containing such files.
+    --SIF                       Compute delta values for stable isotope fingerprinting data.
+    --SIP                       Compute fractions (e.g. 13C/12C) for stable isotope probing data.
+    --PROTEIN                   Only use this to calculate stats for each protein instead of for each bin
+    --isotope                   13C, 14C, 15N, 17O, 18O, 2H, 3H, 33S, 34S or 36S, default 13C (only needed for delta
+                                calculations for SIF)
+    --isotope_abundance_matrix  Path to file with isotope matrix, a default file is included with calisp (only needed for
+                                delta calculations, SIF)
+    --vocabulary_file           Use this if you want to replace bin names, protein names or reassign patterns to bins or
+                                proteins (see below)
+```
+
+## The Vocabulary File
+
+The file should consist of rows, with each row defining a change to the data. Each row should have four values, separated by
+a single tab. The first and third values should be "bins", "proteins", "experiment" or "ms_run". here are a few examples:
+
+### Example 1
+
+In this example, changes are purely cosmetic, we replace abstract bin identifiers with a more meaningful taxonomy for
+visualization:
+```
+bins	bin_245 bins	Prochlorococcus
+...
+```
+
+### Example 2
+
+In this example, we have two bins that are both Prochlorococcus. We are interested to plot the assimilation of 13C by
+Prochlorococcus but we have two Prochlorococcus bins. Using the following vocabulary line, these two bins ate treated as one:
+
+```
+bins	bin_245 bins	Prochlorococcus
+bins	bin_395 bins	Prochlorococcus
+```
+
+### Example 3
+
+We have a dataset, but never added any bin identifiers to protein ids. We want to compute median values data by bin. We add a
+line for each protein, assigning it to a bin:
+
+```
+proteins    Q72K23  bins    Azoarcus
+proteins    Q72H45  bins    Azoarcus
+proteins    Q72KG1  bins    Azoarcus
+...
+proteins    XD0001  bins    Nitrosomonas
+proteins    XD0002  bins    Nitrosomonas
+proteins    XD0003  bins    Nitrosomonas
+...
+
+### Example 4
+
+We have analysed multiple replicates for each experiment and want to aggregate the results across the replicates:
+
+```
+ms_run  run_a1  ms_run  time_point_1
+ms_run  run_a2  ms_run  time_point_1
+...
+ms_run  run_b1  ms_run  time_point_2
+ms_run  run_b2  ms_run  time_point_2
+
+```
 
 ## Please cite
+
+Calisp was developed using [PyCharm community edition](https://www.jetbrains.com/pycharm/).
 
 Kleiner M, Dong X, Hinzke T, Wippler J, Thorson E, Mayer B, Strous M (2018) A metaproteomics method to determine 
 carbon sources and assimilation pathways of species in microbial communities. Proceedings of the National Academy 

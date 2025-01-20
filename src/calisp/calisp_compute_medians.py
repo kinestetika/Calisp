@@ -12,15 +12,16 @@ DELTA = False
 RESULT_FILE = Path()
 TARGET_ISOTOPE = 'C13'
 BASE_ISOTOPE = 'C12'
+FOR_EACH_PROTEIN = False
 
 def parse_arguments():
-    global FILES, VOCABULARY, DELTA, RESULT_FILE, TARGET_ISOTOPE, BASE_ISOTOPE
+    global FILES, VOCABULARY, DELTA, RESULT_FILE, TARGET_ISOTOPE, BASE_ISOTOPE, FOR_EACH_PROTEIN
     parser = ArgumentParser(description='calisp_compute_medians.py. (C) Marc Strous, 2025')
     parser.add_argument('--result_file', required=True,  # type=argparse.FileType('r'),
                         help='[.csv] file or folder with [.csv] calisp filtered output file(s).')
     parser.add_argument('--SIF', default=False, action='store_true', help='SIF (fingerprinting, natural abundances).')
     parser.add_argument('--SIP', default=False, action='store_true', help='SIP (probing, isotopes were added to the experiment).')
-
+    parser.add_argument('--protein', default=False, action='store_true', help='Collect stats per protein instead of bin.')
     parser.add_argument('--vocabulary_file', default='', help='a tab delimited file defining any changes that need to be made to '
                                                                            '"proteins", "bins", "experiment" and "ms_run" (see README.md for examples)')
     parser.add_argument('--isotope', default='13C', choices=['13C', '14C', '15N', '17O', '18O', '2H', '3H', '33S',
@@ -64,7 +65,6 @@ def parse_arguments():
     isotopic_pattern_utils.ISOTOPE_MATRIX = isotopic_pattern_utils.load_isotope_matrix(None)
     isotopic_pattern_utils.NATURAL_ABUNDANCES = isotopic_pattern_utils.load_isotope_matrix(None)
 
-
     if args.vocabulary_file:
         vocabulary_file = Path(args.vocabulary_file)
         if not input_file.exists():
@@ -83,6 +83,7 @@ def parse_arguments():
                     log(f'Offending line: "{line}"')
                     log('Please fix the vocabulary and run again.')
                     exit(1)
+    FOR_EACH_PROTEIN = args.protein
 
 
 def parse_data(filenames):
@@ -102,13 +103,59 @@ def apply_vocabulary(data, vocabulary):
         data.loc[affected_data, entry["target_key"]] = entry["target_value"]
     return data
 
+
 def count_unique_proteins(data):
     proteins = list(data['proteins'].unique())
     proteins = set(' '.join(proteins).split())
     return len(proteins)
 
 
-def compute_medians(data, delta):
+def get_topic_stats(for_each_protein, topic, experiment, ms_run, target_column, target_column_name, data):
+    if for_each_protein:
+        return {'protein(s)': topic,
+                'bins(s)': ' '.join(set(' '.join(data.bins.unique()).split())),
+                'experiment': experiment,
+                'ms_run': ms_run,
+                'summed intensity': data['pattern_total_intensity'].sum(),
+                '# unique peptides': len(data['peptide'].unique()),
+                '# PSMs': len(data['psm_id'].unique()),
+                '# patterns': len(data.index),
+                '#spectra': len(data.index),
+                target_column_name: data[target_column].median(),
+                'lower_quantile': data[target_column].quantile(0.25),
+                'upper_quantile': data[target_column].quantile(0.75),
+                'mean_psm_neutron_count': float(data['psm_neutrons'].sum()) / len(data.index)}
+    else:
+        return {'bin': topic,
+                'experiment': experiment,
+                'ms_run': ms_run,
+                'summed intensity': data['pattern_total_intensity'].sum(),
+                '# unique proteins': count_unique_proteins(data),
+                '# unique peptides': len(data['peptide'].unique()),
+                '# PSMs': len(data['psm_id'].unique()),
+                '# patterns': len(data.index),
+                '#spectra': len(data.index),
+                target_column_name: data[target_column].median(),
+                'lower_quantile': data[target_column].quantile(0.25),
+                'upper_quantile': data[target_column].quantile(0.75),
+                'mean_psm_neutron_count': float(data['psm_neutrons'].sum()) / len(data.index)}
+
+
+def aggregate_stats_for_topic(for_each_protein, topic, target_column, target_column_name, all_stats, new_data):
+    for experiment in new_data.experiment.unique():
+        experiment_data = new_data[new_data.experiment == experiment]
+        for ms_run in experiment_data.ms_run.unique():
+            ms_run_data = experiment_data[experiment_data.ms_run == ms_run]
+            ms_run_stats = get_topic_stats(for_each_protein, topic, experiment, ms_run, target_column,
+                                           target_column_name, ms_run_data)
+            if all_stats is not None:
+                all_stats = pd.concat([all_stats, pd.DataFrame([ms_run_stats])], ignore_index=True)
+            else:
+                all_stats = pd.DataFrame([ms_run_stats])
+    return all_stats
+
+
+def compute_medians(data, delta, for_each_protein):
     if delta:
         target_column = "ratio_fft"
         target_column_name = f"median delta{TARGET_ISOTOPE} (per mille)"
@@ -120,31 +167,16 @@ def compute_medians(data, delta):
         target_column = "ratio_na"
         target_column_name = f"median ratio {TARGET_ISOTOPE}/{BASE_ISOTOPE} (-)"
 
-    summary_stats = None
-    for bin in data["bins"].unique():
-        bin_data = data[data.bins == bin]
-        for experiment in bin_data["experiment"].unique():
-            experiment_data = bin_data[bin_data.experiment == experiment]
-            for ms_run in experiment_data["ms_run"].unique():
-                ms_run_data = experiment_data[experiment_data.ms_run == ms_run]
-                ms_run_stats = {'bin': bin,
-                                'experiment': experiment,
-                                'ms_run': ms_run,
-                                'summed intensity': ms_run_data['pattern_total_intensity'].sum(),
-                                '# unique proteins': count_unique_proteins(ms_run_data),
-                                '# unique peptides': len(ms_run_data['peptide'].unique()),
-                                '# PSMs': len(ms_run_data['psm_id'].unique()),
-                                '# patterns': len(ms_run_data.index),
-                                '#spectra': len(ms_run_data.index),
-                                target_column_name: ms_run_data[target_column].median(),
-                                'lower_quantile': ms_run_data[target_column].quantile(0.25),
-                                'upper_quantile': ms_run_data[target_column].quantile(0.75),
-                                'mean_psm_neutron_count': float(ms_run_data['psm_neutrons'].sum()) / len(ms_run_data.index)}
-                if summary_stats:
-                    summary_stats = pd.concat([summary_stats, pd.DataFrame(ms_run_stats)], ignore_index=True)
-                else:
-                    summary_stats = pd.DataFrame([ms_run_stats])
-    return summary_stats
+    all_stats = None
+    if for_each_protein:
+        for protein in data.proteins.unique():
+            protein_data = data[data.proteins == protein]
+            all_stats = aggregate_stats_for_topic(for_each_protein, protein, target_column, target_column_name, all_stats, protein_data)
+    else:
+        for bin in data.bins.unique():
+            bin_data = data[data.bins == bin]
+            all_stats = aggregate_stats_for_topic(for_each_protein, bin, target_column, target_column_name, all_stats, bin_data)
+    return all_stats
 
 
 def main():
@@ -152,7 +184,7 @@ def main():
     parse_arguments()
     data = parse_data(FILES)
     data = apply_vocabulary(data, VOCABULARY)
-    stats = compute_medians(data, DELTA)
+    stats = compute_medians(data, DELTA, FOR_EACH_PROTEIN)
     stats.to_csv(RESULT_FILE, index = False)
 
 

@@ -228,7 +228,8 @@ bins	bin_245 bins	Prochlorococcus
 ### Example 2
 
 In this example, we have two bins that are both Prochlorococcus. We are interested to plot the assimilation of 13C by
-Prochlorococcus but we have two Prochlorococcus bins. Using the following vocabulary line, these two bins ate treated as one:
+Prochlorococcus but we have two Prochlorococcus bins. Using the following vocabulary line, these two bins will both be
+renamed to Prochlorococcus and will thus be treated as one:
 
 ```
 bins	bin_245 bins	Prochlorococcus
@@ -237,7 +238,7 @@ bins	bin_395 bins	Prochlorococcus
 
 ### Example 3
 
-We have a dataset, but never added any bin identifiers to protein ids. We want to compute median values data by bin. We add a
+We have a dataset, but never added any bin identifiers to protein ids. But we do want to compute median values by bin. We add a
 line for each protein, assigning it to a bin:
 
 ```

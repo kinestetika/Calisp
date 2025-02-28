@@ -34,7 +34,7 @@ def parse_arguments():
                         help='For metagenomic data, the delimiter that separates the bin ID from the protein ID '
                              '[default "_"]. Use "-" to ignore bins ID entirely.')
     parser.add_argument('--threads', default=4, type=int,
-                        help='The number of (virtual) processors that calisp will use')
+                        help='The number of (virtual) processors that calisp will use (default 4)')
     parser.add_argument('--isotope', default='13C', choices=['13C', '14C', '15N', '17O', '18O', '2H', '3H', '33S',
                                                              '34S', '36S'],
                         help='The target isotope. Default: 13C')
@@ -67,6 +67,8 @@ def parse_arguments():
     log(f'threads:        {args.threads}')
     log(f'compute_clumps: {args.compute_clumps}')
     log(f'isotope_matrix: {isotopic_pattern_utils.DEFAULT_MATRIX_FILE}')
+    isotopic_pattern_utils.print_matrix(isotope_column_index=isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX,
+                                        element_row_index=isotopic_pattern_utils.ELEMENT_ROW_INDEX)
     args.mass_accuracy /= 1e6
     MASS_ACCURACY = args.mass_accuracy
     COMPUTE_CLUMPS = args.compute_clumps
@@ -169,10 +171,10 @@ def subsample_ms1_spectra(task):
         for i in range(p['pattern_peak_count']):
             intensities[i] = p[f'i{i}']
             masses[i] = p[f'm{i}']
-        isotopic_pattern_utils.fit_relative_neutron_abundance(p, intensities, element_counts, isotopic_pattern_utils.NATURAL_ABUNDANCES)
-        isotopic_pattern_utils.fit_fft(p, intensities, element_counts, isotopic_pattern_utils.ISOTOPE_MATRIX)
+        isotopic_pattern_utils.fit_relative_neutron_abundance(p, intensities, element_counts, task['natural_abundances'])
+        isotopic_pattern_utils.fit_fft(p, intensities, element_counts, task['isotope_matrix'])
         if COMPUTE_CLUMPS:
-            isotopic_pattern_utils.fit_clumpy_carbon(p, intensities, element_counts, isotopic_pattern_utils.ISOTOPE_MATRIX)
+            isotopic_pattern_utils.fit_clumpy_carbon(p, intensities, element_counts, task['isotope_matrix'])
         isotopic_pattern_utils.compute_spacing_and_irregularity(p, masses, p['pattern_charge'])
     return subsampled_patterns
 
@@ -347,6 +349,8 @@ def main():
                           'ms1_id_list': ms1_id_list,
                           'ms1_spectra_list': ms1_spectra_list,
                           'psms': psm_data_of_current_ms_run.loc[lambda df: df['peptide'] == peptide, :],
+                          'isotope_matrix': isotopic_pattern_utils.ISOTOPE_MATRIX,
+                          'natural_abundances': isotopic_pattern_utils.NATURAL_ABUNDANCES
                           # 'psms': psm_data_of_current_ms_run[psm_data_of_current_ms_run['peptide'] == peptide],
                           } for peptide in peptides]
                 patterns_reassigned_count = 0

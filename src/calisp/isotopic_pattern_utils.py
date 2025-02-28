@@ -43,9 +43,21 @@ def load_isotope_matrix(matrix_file):
     return matrix
 
 
-# VPDB standard 13C/12C = 0.0111802 in Isodat software
-# https://www.webelements.com/sulfur/isotopes.html
-# see also http://iupac.org/publications/pac/pdf/2003/pdf/7506x0683.pdf
+def print_matrix(isotope_column_index=-1, element_row_index=-1, matrix=None):
+    if not matrix:
+        matrix = ISOTOPE_MATRIX
+    elements = 'CNOHS'
+    print('   isotope matrix')
+    for row_id in range(len(matrix)):
+        print('   ', end='')
+        end = '* ' if row_id == element_row_index else '  '
+        print(elements[row_id], end=end)
+        row = matrix[row_id]
+        for column_id in range(len(row)):
+            end = '* ' if row_id == element_row_index and column_id == isotope_column_index else '  '
+            print(f'{row[column_id]:.5f}', end=end)
+        print()
+
 
 def compute_relative_neutron_abundance_of_non_target_isotopes(element_counts, matrix: np.ndarray):
     rna_untargeted = np.float32(0)

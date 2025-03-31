@@ -12,7 +12,7 @@ class PeptideSpectrumMatchFileReader:
         self.experiment_file_name = experiment_file_name
         self.bin_delimiter = bin_delimiter
         self.unknown_modifications = set()
-        self.parse_bins = bin_delimiter != '-'
+        self.parse_bins = bin_delimiter != '--'
 
     def __enter__(self):
         try:

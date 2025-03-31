@@ -32,7 +32,7 @@ def parse_arguments():
                         help='The maximum mass difference between theoretical mass and experimental mass of a peptide')
     parser.add_argument('--bin_delimiter', default='_',
                         help='For metagenomic data, the delimiter that separates the bin ID from the protein ID '
-                             '[default "_"]. Use "-" to ignore bins ID entirely.')
+                             '[default "_"]. Use "--" to ignore bins ID entirely.')
     parser.add_argument('--threads', default=4, type=int,
                         help='The number of (virtual) processors that calisp will use (default 4)')
     parser.add_argument('--isotope', default='13C', choices=['13C', '14C', '15N', '17O', '18O', '2H', '3H', '33S',

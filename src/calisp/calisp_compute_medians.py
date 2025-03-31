@@ -137,7 +137,7 @@ def get_topic_stats(for_each_protein, topic, experiment, ms_run, target_column, 
     # here we create one line of the summary stats, aggregating all the measurements for one protein, or for one bin
     if for_each_protein:
         return {'protein(s)': topic,
-                'bin(s)': ' '.join(set(' '.join(data['bins'].unique()).split())),
+                'bin(s)': ' '.join(set(' '.join([str(b) for b in data['bins'].unique()]).split())),
                 'experiment': experiment,
                 'ms_run': ms_run,
                 'summed intensity': data['pattern_total_intensity'].sum(),

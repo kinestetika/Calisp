@@ -2,7 +2,7 @@ import time
 
 START_TIME = time.monotonic()
 LOG_TOPICS = set()
-VERSION = '3.1.2'
+VERSION = '3.1.3'
 
 def format_runtime():
     runtime = time.monotonic() - START_TIME

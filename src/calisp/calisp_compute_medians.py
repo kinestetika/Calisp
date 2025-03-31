@@ -71,7 +71,7 @@ def parse_arguments():
         isotopic_pattern_utils.DEFAULT_MATRIX_FILE = Path(args.isotope_abundance_matrix)
     isotopic_pattern_utils.ISOTOPE_MATRIX = isotopic_pattern_utils.load_isotope_matrix(None)
     isotopic_pattern_utils.NATURAL_ABUNDANCES = isotopic_pattern_utils.load_isotope_matrix(None)
-    if args.sif:
+    if args.SIF:
         isotopic_pattern_utils.print_matrix(isotope_column_index=isotopic_pattern_utils.ISOTOPE_COLUMN_INDEX,
                                             element_row_index=isotopic_pattern_utils.ELEMENT_ROW_INDEX)
 

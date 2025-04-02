@@ -12,7 +12,7 @@ from calisp import isotopic_pattern_utils
 from calisp import data_store
 from calisp import element_count_and_mass_utils
 from calisp.log import log, VERSION
-from calisp.peptide_spectrum_match_files import PeptideSpectrumMatchFileReader
+from calisp.experiment_files import TabularExperimentFileReader
 
 MASS_ACCURACY = 1e-5
 COMPUTE_CLUMPS = False
@@ -32,7 +32,7 @@ def parse_arguments():
                         help='The maximum mass difference between theoretical mass and experimental mass of a peptide')
     parser.add_argument('--bin_delimiter', default='_',
                         help='For metagenomic data, the delimiter that separates the bin ID from the protein ID '
-                             '[default "_"]. Use "--" to ignore bin ID entirely.')
+                             '[default "_"]. Use "none" to ignore bin ID entirely.')
     parser.add_argument('--threads', default=4, type=int,
                         help='The number of (virtual) processors that calisp will use (default 4)')
     parser.add_argument('--isotope', default='13C', choices=['13C', '14C', '15N', '17O', '18O', '2H', '3H', '33S',
@@ -100,15 +100,15 @@ def flag_ambiguous_psms(my_psm_data: pd.DataFrame):
 
 
 def set_precursor(precursors_list, my_psm_data, index):
-    for precursor_dict in precursors_list:
+    for precursor_as_dict in precursors_list:
         try:
-            my_psm_data.at[index, 'psm_precursor_id'] = int(precursor_dict['precursor id'])
-            my_psm_data.at[index, 'psm_precursor_mz'] = int(precursor_dict['mz'])
+            my_psm_data.at[index, 'psm_precursor_id'] = int(precursor_as_dict['precursor id'])
+            my_psm_data.at[index, 'psm_precursor_mz'] = int(precursor_as_dict['mz'])
             return 1
         except KeyError:
             log('Warning: Unexpected definition of precursor dictionary:')
-            for k in precursor_dict.keys():
-                log(k, precursor_dict[k])
+            for k in precursor_as_dict.keys():
+                log(k, precursor_as_dict[k])
     return 0
 
 # TOTAL_CHARGE_TRIALS = 0
@@ -287,7 +287,7 @@ def main():
         experiment_filename = my_data_store.experiments[experiment_index]
         log(f'Parsing ({experiment_index + 1}/{len(my_data_store.experiments)}) peptide file(s), '
             f'"{os.path.basename(experiment_filename)}"...')
-        with PeptideSpectrumMatchFileReader(experiment_filename, bin_delimiter=args.bin_delimiter) as peptide_reader:
+        with TabularExperimentFileReader(experiment_filename, bin_delimiter=args.bin_delimiter) as peptide_reader:
             psm_as_dict = []
             for psm in peptide_reader:
                 psm_as_dict.append(psm)
@@ -326,13 +326,14 @@ def main():
                         ms1_id_list.append(spectrum.ID)
                         ms1_spectra_list.append(spectrum.peaks('centroided'))
                     elif spectrum.ms_level == 2:
-                        ms2_spectra_precursors[spectrum.ID] = spectrum.selected_precursors
+                        ms2_spectra_precursors[spectrum.ID] = spectrum.selected_precursors  # this list usually has length 1
             psm_with_ms1_spectrum_count = 0
             for psm_index in psm_data_of_current_ms_run.index:
                 try:
                     psm_with_ms1_spectrum_count += set_precursor(ms2_spectra_precursors[
-                                                                 psm_data_of_current_ms_run.at[psm_index, 'psm_id']],
-                                                             psm_data_of_current_ms_run, psm_index)
+                                                                     psm_data_of_current_ms_run.at[psm_index, 'psm_id']],
+                                                                 psm_data_of_current_ms_run,
+                                                                 psm_index)
                 except KeyError:
                     pass
             log(f'({psm_with_ms1_spectrum_count}/{len(psm_data_of_current_ms_run.index)}) PSMs have precursor MS1 spectrum')

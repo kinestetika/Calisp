@@ -17,7 +17,7 @@ DATAFRAME_DATATYPES = {'experiment': str,
                        'psm_mz': float,
                        'psm_charge': int,
                        'psm_neutrons': float,
-                       'psm_rank': int,
+                       'psm_rank': int,  # currently not set anywhere
                        'psm_precursor_id': int,
                        'psm_precursor_mz': float,
                        'pattern_charge': int,
@@ -35,8 +35,8 @@ DATAFRAME_DATATYPES = {'experiment': str,
                        'flag_peptide_assigned_to_multiple_bins': bool,
                        'flag_peptide_assigned_to_multiple_proteins': bool,
                        'flag_peptide_mass_and_elements_undefined': bool,
-                       'flag_psm_has_low_confidence': bool,
-                       'flag_psm_is_ambiguous': bool,
+                       'flag_psm_has_low_confidence': bool,  # proteome discoverer only
+                       'flag_psm_is_ambiguous': bool,  # proteome discoverer only
                        'flag_pattern_is_contaminated': bool,
                        'flag_pattern_is_wobbly': bool,
                        'flag_peak_at_minus_one_pos': bool}

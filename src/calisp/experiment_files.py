@@ -88,7 +88,6 @@ PLATFORMS = {'proteome_discoverer': {'column_names': ['Annotated Sequence', 'Con
              'fragpipe':            {'column_names': ['Peptide', 'Expectation', 'Assigned Modifications', 'Spectrum', 'Charge',
                                                       'Calibrated Observed M/Z', 'Protein', 'Mapped Proteins'],
                                      'parser': parse_psm_info_fragpipe},
-                                     }
             }
 
 

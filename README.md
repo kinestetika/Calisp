@@ -69,6 +69,7 @@ If you would like to explore calisp results in Jupyter notebooks, run the follow
     --threads                   # of threads used, default 4
     --isotope                   13C, 14C, 15N, 17O, 18O, 2H, 3H, 33S, 34S or 36S, default 13C
     --bin_delimiter             character that separates the bin ID from the remainder of protein IDs, default '_'
+                                (use "none" to not consider bins at all)
     --mass_accuracy             accuracy of peak m/z identifications, default 10 ppm
     --isotope_abundance_matrix  path to file with isotope matrix, a default file is included with calisp
     --compute_clumps            use only if you want to compute clumpiness

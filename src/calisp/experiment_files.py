@@ -8,14 +8,13 @@ from calisp.log import log
 
 UNBINNED = 'unbinned'
 PATTERN_BOUNDARY_AA = re.compile('\[[A-Z]]')
-UNKNOWN_MODIFICATIONS = set()
 
 def get_column_indexes(header_line, platform_target_columns):
     header_words = header_line.replace('"', '').strip().split('\t')
     return {c: header_words.index(c) for c in platform_target_columns}
 
 
-def parse_psm_info_fragpipe(line, target_columns):
+def parse_psm_info_fragpipe(line, target_columns, unknown_modifications):
     return {
         'sequence': '',
         'above_threshold': False,
@@ -29,8 +28,8 @@ def parse_psm_info_fragpipe(line, target_columns):
     }
 
 
-def parse_psm_info_proteome_discoverer(line, target_columns):
-    words = line.strip('"').split('"\t"')
+def parse_psm_info_proteome_discoverer(line, target_columns, unknown_modifications):
+    words = line[1:-1].split('"\t"')
     # strip mods from aminoacid sequence:
     peptide_aminoacid_sequence = words[target_columns['Annotated Sequence']].upper()
     peptide_aminoacid_sequence = re.sub(PATTERN_BOUNDARY_AA, '', peptide_aminoacid_sequence).strip('.')
@@ -50,7 +49,7 @@ def parse_psm_info_proteome_discoverer(line, target_columns):
         if not m:
             peptide_modifications.append(-1)
             peptide_modification_positions.append(0)
-            UNKNOWN_MODIFICATIONS.add(modification_definition)
+            unknown_modifications.add(modification_definition)
             continue
         i = element_count_and_mass_utils.unimod_peptide_modifications_id(m.group(2))
         if i >= 0:
@@ -66,8 +65,7 @@ def parse_psm_info_proteome_discoverer(line, target_columns):
         else:
             peptide_modifications.append(-1)
             peptide_modification_positions.append(0)
-            UNKNOWN_MODIFICATIONS.add(modification_definition)
-
+            unknown_modifications.add(modification_definition)
     return {
         'sequence': peptide_aminoacid_sequence,
         'above_threshold': words[target_columns['Confidence']] == 'High',
@@ -78,7 +76,7 @@ def parse_psm_info_proteome_discoverer(line, target_columns):
         'spectrum_file': spectrum_file_base,
         'charge': int(words[target_columns['Charge']]),
         'm/z': float(words[target_columns['m/z [Da]']]),
-        'proteins': {p for p in words[target_columns['Protein Accessions']].replace("\t", " ").split(';')},
+        'proteins': {p.strip() for p in words[target_columns['Protein Accessions']].replace("\t", " ").split(';')},
     }
 
 
@@ -95,28 +93,24 @@ class TabularExperimentFileReader:
     def __init__(self, experiment_file_name, bin_delimiter='_'):
         self.experiment_file_name = experiment_file_name
         self.bin_delimiter = bin_delimiter
-        self.unknown_modifications = set()
         self.parse_bins = bin_delimiter != 'none'
+        self.unknown_modifications = set()
 
     def __enter__(self):
-        try:
-            self.file = open(self.experiment_file_name)
-            line = self.file.readline()
-            for platform, platform_def in PLATFORMS:
-                try:
-                    self.target_columns = get_column_indexes(line, platform_def['column_names'])
-                    self.parser = platform_def['parser']
-                    log(f'Experiment file "{self.experiment_file_name}" generated with {platform}')
-                    break
-                except ValueError:
-                    pass
-            if not self.target_columns:
-                log(f'Experiment file "{self.experiment_file_name}" has unknown format. Aborting...')
-                exit(1)
-            return self
-        except:
-            log(f'Error while reading experiment file "{self.experiment_file_name}". Aborting...')
+        self.file = open(self.experiment_file_name)
+        line = self.file.readline()
+        for platform, platform_def in PLATFORMS.items():
+            try:
+                self.target_columns = get_column_indexes(line, platform_def['column_names'])
+                self.parser = platform_def['parser']
+                log(f'Experiment file "{self.experiment_file_name}" generated with {platform}')
+                break
+            except ValueError:
+                pass
+        if not self.target_columns:
+            log(f'Experiment file "{self.experiment_file_name}" has unknown format. Aborting...')
             exit(1)
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
@@ -129,7 +123,7 @@ class TabularExperimentFileReader:
 
     def __next__(self) -> {}:
         for line in self.file:
-            psm_info = self.parser(line, self.target_columns)
+            psm_info = self.parser(line, self.target_columns, self.unknown_modifications)
             # parse bin names
             proteins = set()
             bins = set()
@@ -163,7 +157,7 @@ class TabularExperimentFileReader:
                     'proteins': ' '.join(proteins),
                     'peptide': f'{psm_info['sequence']} '
                                f'{",".join([element_count_and_mass_utils.unimod_list()[m] for m in psm_info["modifications"]])} '
-                               f'{",".join(psm_info["modification_positions"])}',
+                               f'{",".join(str(p) for p in psm_info["modification_positions"])}',
                     'psm_id': psm_info['ms2_id'],  # this refers to the id of the associated ms2 spectrum
                     'psm_mz': psm_info['m/z'],
                     'psm_charge': psm_info['charge'],
@@ -188,6 +182,6 @@ class TabularExperimentFileReader:
         # end of file reached
         # log problems
         if len(self.unknown_modifications):
-            print(f'Warning: Encountered {len(self.unknown_modifications)} unknown modifications, '
-                  f'such as {self.unknown_modifications}')
+            print(f'Warning: Encountered {len(self.unknown_modifications)} unknown modifications: ' +
+                  ' '.join(self.unknown_modifications))
         raise StopIteration

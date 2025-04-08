@@ -27,37 +27,47 @@ def parse_psm_info_fragpipe(line, target_columns, unknown_modifications):
 
     proteins = set()
     proteins.add(words[target_columns['Protein']].split()[0])
-    for p in words[target_columns['Mapped Proteins']].split(', '):
-        proteins.add(p.split()[0])
+    try:
+        for p in words[target_columns['Mapped Proteins']].split(', '):
+            proteins.add(p.split()[0])
+    except IndexError:
+        pass
 
     modifications = []
     modification_positions = []
 
-    PATTERN_MOD = re.compile(r'(\d+)[A-Z]\([\.\d]+\)')
-    for mod_as_str in words[target_columns['Assigned Modifications']].split(','):
-        m = PATTERN_MOD.match(mod_as_str)
-        pos = int(m.group(1))
-        delta_mass = float(m.group(2))
-        unimod_id = element_count_and_mass_utils.unimod_peptide_modifications_match_mass(delta_mass)
-        modifications.append(unimod_id)
-        modification_positions.append(pos)
+    if assigned_modification_str := words[target_columns['Assigned Modifications']]:
+        PATTERN_MOD = re.compile(r'(\d*)[A-Za-z\-]+\(([\.\d]+)\)')
+        for mod_as_str in assigned_modification_str.split(','):
+            try:
+                m = PATTERN_MOD.match(mod_as_str)
+                try:
+                    pos = int(m.group(1))
+                except ValueError:
+                    pos = 0
+                delta_mass = float(m.group(2))
+                unimod_id = element_count_and_mass_utils.unimod_peptide_modifications_match_mass(delta_mass)
+                modifications.append(unimod_id)
+                modification_positions.append(pos)
+            except AttributeError:
+                log(f'Warning: Formatting error while attempting to parse PTM "{mod_as_str}"')
 
-    observed_modification_str = words[target_columns['Observed Modifications']]
-    if 'First isotopic peak' in observed_modification_str:
-        m_over_z -= element_count_and_mass_utils.NEUTRON_MASS_SHIFT / charge
-    elif 'Second isotopic peak' in observed_modification_str:
-        m_over_z -= 2 * element_count_and_mass_utils.NEUTRON_MASS_SHIFT / charge
+    if observed_modification_str := words[target_columns['Observed Modifications']]:
+        if 'First isotopic peak' in observed_modification_str:
+            m_over_z -= element_count_and_mass_utils.NEUTRON_MASS_SHIFT / charge
+        elif 'Second isotopic peak' in observed_modification_str:
+            m_over_z -= 2 * element_count_and_mass_utils.NEUTRON_MASS_SHIFT / charge
 
-    for s in [r'Mod1: ', r'Mod2: ', r' \(PeakApex: [\.\d]+\)', r' \(PeakApex: [\.\d]+, Theoretical: [\.\d]+\)',
-              r'First isotopic peak', r'Second isotopic peak', r'Isotopic peak error', r'Unannotated mass-shift [\.\d]+',
-              r'[;,:]\(\)', r'[\.\d]+']:
-        observed_modification_str = re.sub(re.compile(s), '', observed_modification_str)
-    for s in observed_modification_str.strip().split():
-        unimod_id = element_count_and_mass_utils.unimod_peptide_modifications_id(m.group(2))
-        if unimod_id < 0:
-            unknown_modifications.add(s)
-        modifications.append(unimod_id)
-        modification_positions.append(0)
+        for s in [r'Mod1: ', r'Mod2: ', r' \(PeakApex: [\.\d]+\)', r' \(PeakApex: [\.\d]+, Theoretical: [\.\d]+\)',
+                  r'First isotopic peak', r'Second isotopic peak', r'Isotopic peak error', r'Unannotated mass-shift [\.\d]+',
+                  'Unannotated mass-shift', r'PeakApex', f'Theoretical', r'[;,:\-\(\)]', r'[\.\d]+']:
+            observed_modification_str = re.sub(re.compile(s), '', observed_modification_str)
+        for s in observed_modification_str.strip().split():
+            unimod_id = element_count_and_mass_utils.unimod_peptide_modifications_id(s)
+            if unimod_id < 0:
+                unknown_modifications.add(s)
+            modifications.append(unimod_id)
+            modification_positions.append(0)
 
     return {
         'sequence': words[target_columns['Peptide']],
@@ -131,7 +141,7 @@ PLATFORMS = {'proteome_discoverer': {'column_names': ['Annotated Sequence', 'Con
                                                       'Spectrum File', 'Charge', 'm/z [Da]', 'Protein Accessions'],
                                      'parser': parse_psm_info_proteome_discoverer},
              'fragpipe':            {'column_names': ['Peptide', 'Expectation', 'Assigned Modifications',
-                                                      'Observed Modifications' 'Spectrum', 'Charge', 'Protein',
+                                                      'Observed Modifications', 'Spectrum', 'Charge', 'Protein',
                                                       'Mapped Proteins', 'Calibrated Observed M/Z'],
                                      'parser': parse_psm_info_fragpipe},
             }
@@ -143,6 +153,7 @@ class TabularExperimentFileReader:
         self.bin_delimiter = bin_delimiter
         self.parse_bins = bin_delimiter != 'none'
         self.unknown_modifications = set()
+        self.target_columns = ''
 
     def __enter__(self):
         self.file = open(self.experiment_file_name)
@@ -150,8 +161,8 @@ class TabularExperimentFileReader:
         for platform, platform_def in PLATFORMS.items():
             try:
                 self.target_columns = get_column_indexes(line, platform_def['column_names'])
-                self.parser = platform_def['parser']
-                log(f'Experiment file "{self.experiment_file_name}" generated with {platform}')
+                self.parse = platform_def['parser']
+                log(f'Experiment file "{self.experiment_file_name}" has {platform} format.')
                 break
             except ValueError:
                 pass
@@ -171,7 +182,9 @@ class TabularExperimentFileReader:
 
     def __next__(self) -> {}:
         for line in self.file:
-            psm_info = self.parser(line, self.target_columns, self.unknown_modifications)
+            psm_info = self.parse(line, self.target_columns, self.unknown_modifications)
+            #if len(psm_info['modifications']):
+            #    print(psm_info)
             # parse bin names
             proteins = set()
             bins = set()
@@ -232,4 +245,5 @@ class TabularExperimentFileReader:
         if len(self.unknown_modifications):
             print(f'Warning: Encountered {len(self.unknown_modifications)} unknown modifications: ' +
                   ' '.join(self.unknown_modifications))
+        exit(0)
         raise StopIteration

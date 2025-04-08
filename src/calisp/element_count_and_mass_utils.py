@@ -39,7 +39,7 @@ NEUTRON_MASS_SHIFT = 1.002
 __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_ELEMENT_COUNTS = []
 __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_EXTRA_NEUTRONS = []
 __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_IDS = []
-
+__ALL_UNIMOD_PEPTIDE_MODIFICATIONS_DELTA_MASS = []
 
 def load_unicode():
     for line in unimod.UNIMOD.splitlines():
@@ -61,6 +61,8 @@ def load_unicode():
             if len(words) > 2:
                 extra_neutrons = np.int16(int(words[2]))
             __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_EXTRA_NEUTRONS.append(extra_neutrons)
+            __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_DELTA_MASS.append(sum(
+                [element_counts[i] * ELEMENT_MONOISOTOPIC_MASSES[i] for i in range(5)]))
 
 
 def unimod_list():
@@ -81,6 +83,12 @@ def unimod_peptide_modifications_extra_neutrons(i):
     return __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_EXTRA_NEUTRONS[i]
 
 
+def unimod_peptide_modifications_delta_mass(i):
+    if not __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_IDS:
+        load_unicode()
+    return __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_DELTA_MASS[i]
+
+
 def unimod_peptide_modifications_id(unimod_id):
     if not __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_IDS:
         load_unicode()
@@ -88,6 +96,17 @@ def unimod_peptide_modifications_id(unimod_id):
         if __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_IDS[i] == unimod_id:
             return i
     return -1
+
+
+def unimod_peptide_modifications_match_mass(delta_mass):
+    smallest_diff = 0.1
+    best_match = -1
+    for i in range(len(__ALL_UNIMOD_PEPTIDE_MODIFICATIONS_IDS)):
+        diff = abs(delta_mass - unimod_peptide_modifications_delta_mass(i))
+        if diff < smallest_diff:
+            smallest_diff = diff
+            best_match = i
+    return best_match
 
 
 def compute_peptide_mass(aminoacid_sequence: str, peptide_modifications, element_counts=np.zeros(5, dtype=np.int16)):

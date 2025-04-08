@@ -7,7 +7,6 @@ from calisp.log import log
 
 
 UNBINNED = 'unbinned'
-PATTERN_BOUNDARY_AA = re.compile('\[[A-Z]]')
 
 def get_column_indexes(header_line, platform_target_columns):
     header_words = header_line.replace('"', '').strip().split('\t')
@@ -15,20 +14,68 @@ def get_column_indexes(header_line, platform_target_columns):
 
 
 def parse_psm_info_fragpipe(line, target_columns, unknown_modifications):
+    words = line.strip().split('\t')
+
+    charge = int(words[target_columns['Charge']])
+    m_over_z = float(words[target_columns['Calibrated Observed M/Z']])
+
+    PATTERN_COORD = re.compile(r'(.+)\.(\d+)\.\d+\.\d$')
+    ms2_coord = words[target_columns['Spectrum']]
+    m = PATTERN_COORD.match(ms2_coord)
+    spectrum_file_base = m.group(1)
+    ms2_id = int(m.group(2))
+
+    proteins = set()
+    proteins.add(words[target_columns['Protein']].split()[0])
+    for p in words[target_columns['Mapped Proteins']].split(', '):
+        proteins.add(p.split()[0])
+
+    modifications = []
+    modification_positions = []
+
+    PATTERN_MOD = re.compile(r'(\d+)[A-Z]\([\.\d]+\)')
+    for mod_as_str in words[target_columns['Assigned Modifications']].split(','):
+        m = PATTERN_MOD.match(mod_as_str)
+        pos = int(m.group(1))
+        delta_mass = float(m.group(2))
+        unimod_id = element_count_and_mass_utils.unimod_peptide_modifications_match_mass(delta_mass)
+        modifications.append(unimod_id)
+        modification_positions.append(pos)
+
+    observed_modification_str = words[target_columns['Observed Modifications']]
+    if 'First isotopic peak' in observed_modification_str:
+        m_over_z -= element_count_and_mass_utils.NEUTRON_MASS_SHIFT / charge
+    elif 'Second isotopic peak' in observed_modification_str:
+        m_over_z -= 2 * element_count_and_mass_utils.NEUTRON_MASS_SHIFT / charge
+
+    for s in [r'Mod1: ', r'Mod2: ', r' \(PeakApex: [\.\d]+\)', r' \(PeakApex: [\.\d]+, Theoretical: [\.\d]+\)',
+              r'First isotopic peak', r'Second isotopic peak', r'Isotopic peak error', r'Unannotated mass-shift [\.\d]+',
+              r'[;,:]\(\)', r'[\.\d]+']:
+        observed_modification_str = re.sub(re.compile(s), '', observed_modification_str)
+    for s in observed_modification_str.strip().split():
+        unimod_id = element_count_and_mass_utils.unimod_peptide_modifications_id(m.group(2))
+        if unimod_id < 0:
+            unknown_modifications.add(s)
+        modifications.append(unimod_id)
+        modification_positions.append(0)
+
     return {
-        'sequence': '',
-        'above_threshold': False,
+        'sequence': words[target_columns['Peptide']],
+        'above_threshold': True,
         'ambiguous': False,
-        'modifications': [],
-        'ms2_id': 0,
-        'spectrum_file': '',
-        'charge': 0,
-        'm/z': 0.0,
-        'proteins': {},
+        'modifications': modifications,
+        'modification_positions': modification_positions,
+        'ms2_id': ms2_id,
+        'spectrum_file': spectrum_file_base,
+        'charge': charge,
+        'm/z': m_over_z,
+        'proteins': proteins,
     }
 
 
 def parse_psm_info_proteome_discoverer(line, target_columns, unknown_modifications):
+    PATTERN_BOUNDARY_AA = re.compile('\[[A-Z]]')
+
     words = line[1:-1].split('"\t"')
     # strip mods from aminoacid sequence:
     peptide_aminoacid_sequence = words[target_columns['Annotated Sequence']].upper()
@@ -83,8 +130,9 @@ def parse_psm_info_proteome_discoverer(line, target_columns, unknown_modificatio
 PLATFORMS = {'proteome_discoverer': {'column_names': ['Annotated Sequence', 'Confidence', 'PSM Ambiguity', 'Modifications', 'First Scan',
                                                       'Spectrum File', 'Charge', 'm/z [Da]', 'Protein Accessions'],
                                      'parser': parse_psm_info_proteome_discoverer},
-             'fragpipe':            {'column_names': ['Peptide', 'Expectation', 'Assigned Modifications', 'Spectrum', 'Charge',
-                                                      'Calibrated Observed M/Z', 'Protein', 'Mapped Proteins'],
+             'fragpipe':            {'column_names': ['Peptide', 'Expectation', 'Assigned Modifications',
+                                                      'Observed Modifications' 'Spectrum', 'Charge', 'Protein',
+                                                      'Mapped Proteins', 'Calibrated Observed M/Z'],
                                      'parser': parse_psm_info_fragpipe},
             }
 

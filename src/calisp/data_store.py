@@ -87,12 +87,15 @@ def _get_mzml_file_runid(file):
     return run_id
 
 
-def _is_target_spectrum_match_file(f):
+def _is_experiment_file(f):
     try:
-        file = open(f)
-        line = file.readline()
+        handle = open(f)
+        line = handle.readline()
+        handle.close()
         outcome = 'Annotated Sequence' in line and 'PSM Ambiguity' in line and 'm/z [Da]' in line
-        file.close()
+        if not outcome:  # for fragpipe results:
+            outcome = (os.path.basename(f) == 'psm.tsv' and 'Peptide' in line and 'Expectation' in line
+                       and 'Assigned Modifications' in line)
         return outcome
     except FileNotFoundError:
         return False
@@ -114,7 +117,7 @@ class DataStore:
         elif os.path.isdir(peptide_file_stub):
             for f in os.listdir(peptide_file_stub):
                 f = os.path.join(peptide_file_stub, f)
-                if _is_target_spectrum_match_file(f) or _is_mzid_file(f):
+                if _is_experiment_file(f) or _is_mzid_file(f):
                     self.experiments.append(f)
         else:
             raise FileNotFoundError(f'Could not read or find provided peptide file: {peptide_file_stub!r}')

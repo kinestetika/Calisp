@@ -80,6 +80,7 @@ def parse_psm_info_fragpipe(line, target_columns, unknown_modifications):
         'charge': charge,
         'm/z': m_over_z,
         'proteins': proteins,
+        'calculated_mass': float(words[target_columns["Calculated Peptide Mass"]])
     }
 
 
@@ -142,7 +143,7 @@ PLATFORMS = {'proteome_discoverer': {'column_names': ['Annotated Sequence', 'Con
                                      'parser': parse_psm_info_proteome_discoverer},
              'fragpipe':            {'column_names': ['Peptide', 'Expectation', 'Assigned Modifications',
                                                       'Observed Modifications', 'Spectrum', 'Charge', 'Protein',
-                                                      'Mapped Proteins', 'Calibrated Observed M/Z'],
+                                                      'Mapped Proteins', 'Calibrated Observed M/Z', 'Calculated Peptide Mass'],
                                      'parser': parse_psm_info_fragpipe},
             }
 
@@ -154,6 +155,7 @@ class TabularExperimentFileReader:
         self.parse_bins = bin_delimiter != 'none'
         self.unknown_modifications = set()
         self.target_columns = ''
+        self.count = 0
 
     def __enter__(self):
         self.file = open(self.experiment_file_name)
@@ -186,6 +188,7 @@ class TabularExperimentFileReader:
             #if len(psm_info['modifications']):
             #    print(psm_info)
             # parse bin names
+            self.count += 1
             proteins = set()
             bins = set()
             if self.parse_bins:
@@ -201,6 +204,8 @@ class TabularExperimentFileReader:
                 peptide_mass = element_count_and_mass_utils.compute_peptide_mass(psm_info['sequence'],
                                                                                  psm_info['modifications'],
                                                                                  peptide_element_counts)
+                if abs(peptide_mass - psm_info["calculated_mass"]) > 0.02:
+                    print(f'{peptide_mass:.2f}\t{psm_info["calculated_mass"]:.2f}\t{psm_info["sequence"]}\t{psm_info['modifications']}')
                 psm_neutrons_in_ms2_spectrum = sum(
                     element_count_and_mass_utils.unimod_peptide_modifications_extra_neutrons(ptm)
                     for ptm in psm_info['modifications'])

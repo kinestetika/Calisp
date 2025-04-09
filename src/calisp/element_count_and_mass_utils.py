@@ -99,6 +99,8 @@ def unimod_peptide_modifications_id(unimod_id):
 
 
 def unimod_peptide_modifications_match_mass(delta_mass):
+    if not __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_IDS:
+        load_unicode()
     smallest_diff = 0.1
     best_match = -1
     for i in range(len(__ALL_UNIMOD_PEPTIDE_MODIFICATIONS_IDS)):
@@ -110,6 +112,8 @@ def unimod_peptide_modifications_match_mass(delta_mass):
 
 
 def compute_peptide_mass(aminoacid_sequence: str, peptide_modifications, element_counts=np.zeros(5, dtype=np.int16)):
+    if not __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_IDS:
+        load_unicode()
     for i in range(5):
         element_counts[i] += WATER_ELEMENT_COUNTS[i]
     for aa in aminoacid_sequence.upper():
@@ -131,6 +135,8 @@ def compute_peptide_mass(aminoacid_sequence: str, peptide_modifications, element
 
 
 def get_element_counts_at_pos(aminoacid_sequence: str, peptide_modifications, peptide_modification_positions, pos):
+    if not __ALL_UNIMOD_PEPTIDE_MODIFICATIONS_IDS:
+        load_unicode()
     aa = aminoacid_sequence[pos]
     if aa not in AMINOACID_INDEXES:
         raise Exception(f"unknown aminoacid {aa} in {aminoacid_sequence} - elements at position computation failed")

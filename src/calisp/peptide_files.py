@@ -37,9 +37,10 @@ def parse_psm_info_fragpipe(line, target_columns, unknown_modifications):
     modification_positions = []
 
     if assigned_modification_str := words[target_columns['Assigned Modifications']]:
-        PATTERN_MOD = re.compile(r'(\d*)[A-Za-z\-]+\(([\.\d]+)\)')
+        PATTERN_MOD = re.compile(r'(\d*)[A-Za-z\-]+\(([\.\d]+)\)')  # for example 8C(57.0214)
         for mod_as_str in assigned_modification_str.split(','):
             try:
+                mod_as_str = mod_as_str.strip()
                 m = PATTERN_MOD.match(mod_as_str)
                 try:
                     pos = int(m.group(1))
@@ -80,7 +81,8 @@ def parse_psm_info_fragpipe(line, target_columns, unknown_modifications):
         'charge': charge,
         'm/z': m_over_z,
         'proteins': proteins,
-        'calculated_mass': float(words[target_columns["Calculated Peptide Mass"]])
+        'calculated_mass': float(words[target_columns["Calculated Peptide Mass"]]),
+        'probability': float(words[target_columns['Probability']])
     }
 
 
@@ -135,22 +137,23 @@ def parse_psm_info_proteome_discoverer(line, target_columns, unknown_modificatio
         'charge': int(words[target_columns['Charge']]),
         'm/z': float(words[target_columns['m/z [Da]']]),
         'proteins': {p.strip() for p in words[target_columns['Protein Accessions']].replace("\t", " ").split(';')},
+        'probability': 0.0
     }
 
 
 PLATFORMS = {'proteome_discoverer': {'column_names': ['Annotated Sequence', 'Confidence', 'PSM Ambiguity', 'Modifications', 'First Scan',
                                                       'Spectrum File', 'Charge', 'm/z [Da]', 'Protein Accessions'],
                                      'parser': parse_psm_info_proteome_discoverer},
-             'fragpipe':            {'column_names': ['Peptide', 'Expectation', 'Assigned Modifications',
+             'fragpipe':            {'column_names': ['Peptide', 'Probability', 'Assigned Modifications',
                                                       'Observed Modifications', 'Spectrum', 'Charge', 'Protein',
                                                       'Mapped Proteins', 'Calibrated Observed M/Z', 'Calculated Peptide Mass'],
                                      'parser': parse_psm_info_fragpipe},
             }
 
 
-class TabularExperimentFileReader:
-    def __init__(self, experiment_file_name, bin_delimiter='_'):
-        self.experiment_file_name = experiment_file_name
+class TabularPeptideFileReader:
+    def __init__(self, peptide_file_name, bin_delimiter='_'):
+        self.peptide_file_name = peptide_file_name
         self.bin_delimiter = bin_delimiter
         self.parse_bins = bin_delimiter != 'none'
         self.unknown_modifications = set()
@@ -158,18 +161,18 @@ class TabularExperimentFileReader:
         self.count = 0
 
     def __enter__(self):
-        self.file = open(self.experiment_file_name)
+        self.file = open(self.peptide_file_name)
         line = self.file.readline()
         for platform, platform_def in PLATFORMS.items():
             try:
                 self.target_columns = get_column_indexes(line, platform_def['column_names'])
                 self.parse = platform_def['parser']
-                log(f'Experiment file "{self.experiment_file_name}" has {platform} format.')
+                log(f'Peptide file "{self.peptide_file_name}" has {platform} format.')
                 break
             except ValueError:
                 pass
         if not self.target_columns:
-            log(f'Experiment file "{self.experiment_file_name}" has unknown format. Aborting...')
+            log(f'Peptide file "{self.peptide_file_name}" has unknown format. Aborting...')
             exit(1)
         return self
 
@@ -217,7 +220,7 @@ class TabularExperimentFileReader:
                 psm_neutrons_in_ms2_spectrum = 0
                 peptide_mass = 0
 
-            return {'experiment': os.path.basename(self.experiment_file_name),
+            return {'experiment': os.path.basename(self.peptide_file_name),
                     'ms_run': psm_info['spectrum_file'],
                     'bins': ' '.join(bins),
                     'proteins': ' '.join(proteins),
@@ -229,6 +232,7 @@ class TabularExperimentFileReader:
                     'psm_charge': psm_info['charge'],
                     'psm_neutrons': psm_neutrons_in_ms2_spectrum,
                     'psm_rank': 0,
+                    'psm_probability': psm_info['probability'],
                     'psm_precursor_id': 0,
                     'psm_precursor_mz': 0,
                     'C': peptide_element_counts[0],
@@ -250,5 +254,4 @@ class TabularExperimentFileReader:
         if len(self.unknown_modifications):
             print(f'Warning: Encountered {len(self.unknown_modifications)} unknown modifications: ' +
                   ' '.join(self.unknown_modifications))
-        exit(0)
         raise StopIteration

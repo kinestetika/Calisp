@@ -12,7 +12,7 @@ from calisp import isotopic_pattern_utils
 from calisp import data_store
 from calisp import element_count_and_mass_utils
 from calisp.log import log, VERSION
-from calisp.experiment_files import TabularExperimentFileReader
+from calisp.peptide_files import TabularPeptideFileReader
 
 MASS_ACCURACY = 1e-5
 COMPUTE_CLUMPS = False
@@ -24,8 +24,8 @@ def parse_arguments():
     parser.add_argument('--spectrum_file', required=True,  # type=argparse.FileType('r'),
                         help='[.mzML] file or folder with [.mzML] file(s).')
     parser.add_argument('--peptide_file', required=True,  # type=argparse.FileType('r'),
-                        help='Search-engine-generated [.mzID] or [.target-peptide-spectrum-match] file or folder with'
-                             ' these files.')
+                        help='Fragpipe [] file or ProteomeExplorer [.target-peptide-spectrum-match] file or folder with'
+                             ' [.target-peptide-spectrum-match] files.')
     parser.add_argument('--output_file', default='calisp-output',
                         help='The name of the folder the output gets written to. Default: calisp-output')
     parser.add_argument('--mass_accuracy', default=10, type=float,
@@ -278,16 +278,17 @@ def main():
     prep_output_folder(args.output_file)
 
     my_data_store = data_store.DataStore()
+    log('Connecting peptide and spectrum files...')
     my_data_store.set_scope(args.peptide_file, args.spectrum_file)
+    log(f'Found {len(my_data_store.experiments)} peptide files and {len(my_data_store.ms_runs)} spectrum files')
 
-    log(f'Found {len(my_data_store.experiments)} peptide files and {len(my_data_store.ms_runs)} MS runs')
     for experiment_index in range(len(my_data_store.experiments)):
 
         # (1) read the "experiment" file with the psm and peptide definitions
         experiment_filename = my_data_store.experiments[experiment_index]
         log(f'Parsing ({experiment_index + 1}/{len(my_data_store.experiments)}) peptide file(s), '
-            f'"{os.path.basename(experiment_filename)}"...')
-        with TabularExperimentFileReader(experiment_filename, bin_delimiter=args.bin_delimiter) as peptide_reader:
+            f'"{experiment_filename}"...')
+        with TabularPeptideFileReader(experiment_filename, bin_delimiter=args.bin_delimiter) as peptide_reader:
             psm_as_dict = []
             for psm in peptide_reader:
                 psm_as_dict.append(psm)
@@ -295,10 +296,12 @@ def main():
         psm_data = psm_data.astype(data_store.DATAFRAME_DATATYPES)
         psm_data = pd.concat([psm_data, pd.DataFrame(psm_as_dict)], ignore_index=True)
         # psm_data.append(psm_as_dict, ignore_index=True)
-        log(f'Parsed {len(psm_data.index)} PSMs from file.')
-        spectrum_file_counter = 0
 
         ms_runs = psm_data["ms_run"].unique()
+
+        log(f'Parsed {len(psm_data.index)} PSMs from peptide file, pointing to {len(ms_runs)} mzml files.')
+        spectrum_file_counter = 0
+
         for ms_run in ms_runs:
             try:
                 ms_run_file = my_data_store.ms_run_address_book[ms_run]

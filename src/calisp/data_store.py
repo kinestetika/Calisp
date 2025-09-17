@@ -18,6 +18,7 @@ DATAFRAME_DATATYPES = {'experiment': str,
                        'psm_charge': int,
                        'psm_neutrons': float,
                        'psm_rank': int,  # currently not set anywhere
+                       'psm_probability': float,
                        'psm_precursor_id': int,
                        'psm_precursor_mz': float,
                        'pattern_charge': int,
@@ -42,7 +43,7 @@ DATAFRAME_DATATYPES = {'experiment': str,
                        'flag_peak_at_minus_one_pos': bool}
 
 DATAFRAME_COLUMNS = ['experiment', 'ms_run', 'bins', 'proteins', 'peptide', 'peptide_mass', 'C', 'N', 'O', 'H', 'S',
-                     'psm_id', 'psm_mz', 'psm_charge', 'psm_neutrons', 'psm_rank', 'psm_precursor_id',
+                     'psm_id', 'psm_mz', 'psm_charge', 'psm_neutrons', 'psm_rank', 'psm_probability', 'psm_precursor_id',
                      'psm_precursor_mz', 'pattern_charge', 'pattern_precursor_id', 'pattern_total_intensity',
                      'pattern_peak_count', 'pattern_median_peak_spacing', 'pattern_mass_irregularity',
                      'ratio_na', 'ratio_fft', 'error_fft', 'error_clumpy',
@@ -87,16 +88,16 @@ def _get_mzml_file_runid(file):
     return run_id
 
 
-def _is_experiment_file(f):
+def _is_peptide_file(f):
     try:
         handle = open(f)
         line = handle.readline()
         handle.close()
-        outcome = 'Annotated Sequence' in line and 'PSM Ambiguity' in line and 'm/z [Da]' in line
-        if not outcome:  # for fragpipe results:
-            outcome = (os.path.basename(f) == 'psm.tsv' and 'Peptide' in line and 'Expectation' in line
+        is_peptide_file = 'Annotated Sequence' in line and 'PSM Ambiguity' in line and 'm/z [Da]' in line
+        if not is_peptide_file:  # for fragpipe results:
+            is_peptide_file = (os.path.basename(f) == 'psm.tsv' and 'Peptide' in line and 'Expectation' in line
                        and 'Assigned Modifications' in line)
-        return outcome
+        return is_peptide_file
     except FileNotFoundError:
         return False
     except UnicodeDecodeError:
@@ -115,16 +116,21 @@ class DataStore:
         if os.path.isfile(peptide_file_stub):
             self.experiments.append(peptide_file_stub)
         elif os.path.isdir(peptide_file_stub):
-            for f in os.listdir(peptide_file_stub):
+            for f in sorted(os.listdir(peptide_file_stub)):
                 f = os.path.join(peptide_file_stub, f)
-                if _is_experiment_file(f) or _is_mzid_file(f):
+                if _is_peptide_file(f) or _is_mzid_file(f):
                     self.experiments.append(f)
+                elif os.path.isdir(f):  # fragpipe results go one dir level deeper
+                    for f1 in os.listdir(f):
+                        f1 = os.path.join(f, f1)
+                        if _is_peptide_file(f1) or _is_mzid_file(f1):
+                            self.experiments.append(f1)
         else:
             raise FileNotFoundError(f'Could not read or find provided peptide file: {peptide_file_stub!r}')
         if os.path.isfile(spectrum_file_stub):
             self.ms_runs.append(spectrum_file_stub)
         elif os.path.isdir(spectrum_file_stub):
-            for f in os.listdir(spectrum_file_stub):
+            for f in sorted(os.listdir(spectrum_file_stub)):
                 f = os.path.join(spectrum_file_stub, f)
                 if _is_mzml_file(f):
                     self.ms_runs.append(f)
